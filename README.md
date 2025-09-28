@@ -1,0 +1,1 @@
+# cabwad-inventory-ui
