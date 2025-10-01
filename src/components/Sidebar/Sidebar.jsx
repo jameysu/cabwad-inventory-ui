@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { Button, Flex, Image, Menu } from "antd";
+import { Button, Flex, Image, Menu, Typography } from "antd";
 import {
   MenuOutlined,
   HomeOutlined,
@@ -11,8 +11,10 @@ import {
   TableOutlined,
 } from "@ant-design/icons";
 import SidebarStyles from "./Sidebar.styles";
-import { useNavigate } from "react-router-dom";
+import { Link, useNavigate } from "react-router-dom";
 import cabwadLogo from "../../assets/images/cabwad-logo.png";
+
+const { Text } = Typography;
 
 const Sidebar = () => {
   const [open, setOpen] = useState(false);
@@ -23,17 +25,28 @@ const Sidebar = () => {
     navigate("/");
   };
 
+  const handleMenuClick = (e) => {
+    setOpen(false); // close on menu click
+    if (e.key === "logout") logout();
+  };
+
   const menuItems = [
     {
       key: "dashboard",
       icon: <HomeOutlined />,
       label: "Dashboard",
       children: [
-        { key: "overview", icon: <RiseOutlined />, label: "Overview" },
+        {
+          key: "overview",
+          icon: <RiseOutlined />,
+          label: <Link to={"/portal/"}>Overview</Link>,
+        },
         {
           key: "inventory-history",
           icon: <HistoryOutlined />,
-          label: "Inventory History",
+          label: (
+            <Link to={"/portal/inventory-history"}>Inventory History</Link>
+          ),
         },
       ],
     },
@@ -57,7 +70,7 @@ const Sidebar = () => {
     {
       key: "logout",
       icon: <LogoutOutlined />,
-      label: <span onClick={logout}>Logout</span>,
+      label: "Logout",
     },
   ];
 
@@ -70,18 +83,41 @@ const Sidebar = () => {
         onClick={() => setOpen((prev) => !prev)}
       />
 
+      {/* Overlay backdrop */}
+      {open && (
+        <div className="sidebar-overlay" onClick={() => setOpen(false)} />
+      )}
+
       <div className={`mobile-sidebar ${open ? "open" : ""}`}>
-        <Flex style={{ padding: "20px" }}>
-          <Image width={60} src={cabwadLogo} />
+        <Flex gap={5} style={{ padding: "20px" }}>
+          <Image width={60} preview={false} src={cabwadLogo} />
+          <Flex vertical justify="center" style={{ color: "white" }}>
+            <Text>Republic of the Philippines</Text>
+            <Text>CABUYAO WATER DISTRICT</Text>
+          </Flex>
         </Flex>
-        <Menu mode="inline" defaultSelectedKeys={["1"]} items={menuItems} />
+        <Menu
+          mode="inline"
+          defaultSelectedKeys={["overview"]}
+          items={menuItems}
+          onClick={handleMenuClick}
+        />
       </div>
 
       <div className="desktop-sidebar">
-        <Flex style={{ padding: "20px" }}>
-          <Image width={60} src={cabwadLogo} />
+        <Flex gap={5} style={{ padding: "20px" }}>
+          <Image width={60} preview={false} src={cabwadLogo} />
+          <Flex vertical justify="center">
+            <Text>Republic of the Philippines</Text>
+            <Text>CABUYAO WATER DISTRICT</Text>
+          </Flex>
         </Flex>
-        <Menu mode="inline" defaultSelectedKeys={["1"]} items={menuItems} />
+        <Menu
+          mode="inline"
+          defaultSelectedKeys={["overview"]}
+          items={menuItems}
+          onClick={handleMenuClick}
+        />
       </div>
     </SidebarStyles>
   );

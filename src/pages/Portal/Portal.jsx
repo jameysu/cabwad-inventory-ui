@@ -2,14 +2,18 @@ import { Route, Routes } from "react-router-dom";
 import Sidebar from "../../components/Sidebar/Sidebar";
 import Overview from "../Overview/Overview";
 import PortalStyle from "./Portal.styles";
+import InventoryHistory from "../InventoryHistory/InventoryHistory";
 
 const Portal = () => {
   return (
     <div style={{ display: "flex" }}>
       <Sidebar />
-      <PortalStyle style={{ flex: 1, padding: "20px", marginLeft: "220px" }}>
+      <PortalStyle>
+        {/* TODO create an avatar here */}
+        <div className="topbar"></div>
         <Routes>
-          <Route path="/overview" element={<Overview />} />
+          <Route index element={<Overview />} />
+          <Route path="/inventory-history" element={<InventoryHistory />} />
         </Routes>
       </PortalStyle>
     </div>

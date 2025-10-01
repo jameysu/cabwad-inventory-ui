@@ -4,13 +4,13 @@ const SidebarStyles = styled.div`
   /* Hamburger Button */
   .menu-btn {
     position: fixed;
-    top: 15px;
-    left: ${({ $open }) => ($open ? "220px" : "15px")};
+    top: 10px;
+    left: ${({ $open }) => ($open ? "310px" : "15px")};
     z-index: 1100;
     font-size: 20px;
     background: #fff;
     border-radius: 8px;
-    box-shadow: 0 4px 10px rgba(0, 0, 0, 0.15);
+    // box-shadow: 0 4px 10px rgba(0, 0, 0, 0.15);
     transition: left 0.3s ease;
 
     @media (min-width: 768px) {
@@ -18,11 +18,25 @@ const SidebarStyles = styled.div`
     }
   }
 
+  .ant-typography {
+    color: white;
+  }
+
+  .sidebar-overlay {
+    position: fixed;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    // background: rgba(0, 0, 0, 0.4);
+    z-index: 900; /* below sidebar (1000), above content */
+  }
+
   .mobile-sidebar {
     position: fixed;
     top: 0;
-    left: -220px;
-    width: 220px;
+    left: -300px;
+    width: 300px;
     height: 100vh;
     background: #2c50a5;
     box-shadow: 2px 0 8px rgba(0, 0, 0, 0.1);
@@ -66,7 +80,7 @@ const SidebarStyles = styled.div`
   .desktop-sidebar {
     display: none;
     height: 100vh;
-    width: 220px;
+    width: 300px;
     position: fixed;
     top: 0;
     left: 0;
