@@ -1,6 +1,8 @@
 import { Routes, Route, Link, Navigate } from "react-router-dom";
 import ThemeProvider from "./ThemeProvider.jsx";
 import Login from "./pages/Login/Login.jsx";
+import Dashboard from "./pages/Dashboard/Dashboard.jsx";
+import NotFound from "./pages/NotFound/NotFound.jsx";
 
 // ProtectedRoute Component to guard routes for authenticated users only
 function ProtectedRoute({ element }) {
@@ -19,11 +21,11 @@ function App() {
       <ThemeProvider>
         <Routes>
           <Route path="/" element={<Login />} />
-          {/* <Route
+          <Route
             path="/dashboard/*"
             element={<ProtectedRoute element={<Dashboard />} />}
-          /> */}
-          {/* <Route path="/*" element={<NotFound />} /> */}
+          />
+          <Route path="/*" element={<NotFound />} />
         </Routes>
       </ThemeProvider>
     </>
