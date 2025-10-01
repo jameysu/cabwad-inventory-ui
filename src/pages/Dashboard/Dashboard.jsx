@@ -1,18 +1,12 @@
 import { Button } from "antd";
 import React from "react";
 import { useNavigate } from "react-router-dom";
+import Sidebar from "../../components/Sidebar/Sidebar";
 
 const Dashboard = () => {
-  const navigate = useNavigate();
-
-  const logout = () => {
-    localStorage.removeItem("auth");
-    navigate("/");
-  };
-
   return (
     <div>
-      <Button onClick={logout}>Log out</Button>
+      <Sidebar />
     </div>
   );
 };
