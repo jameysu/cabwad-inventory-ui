@@ -1,13 +1,18 @@
 import { useState } from "react";
-import { Button, Menu } from "antd";
+import { Button, Flex, Image, Menu } from "antd";
 import {
   MenuOutlined,
   HomeOutlined,
-  UserOutlined,
-  SettingOutlined,
+  UnorderedListOutlined,
+  FileDoneOutlined,
+  LogoutOutlined,
+  RiseOutlined,
+  HistoryOutlined,
+  TableOutlined,
 } from "@ant-design/icons";
 import SidebarStyles from "./Sidebar.styles";
 import { useNavigate } from "react-router-dom";
+import cabwadLogo from "../../assets/images/cabwad-logo.png";
 
 const Sidebar = () => {
   const [open, setOpen] = useState(false);
@@ -19,15 +24,45 @@ const Sidebar = () => {
   };
 
   const menuItems = [
-    { key: "1", icon: <HomeOutlined />, label: "Home" },
-    { key: "2", icon: <UserOutlined />, label: "Profile" },
-    { key: "3", icon: <SettingOutlined />, label: "Settings" },
-    { key: "4", label: <span onClick={logout}>Logout</span> },
+    {
+      key: "dashboard",
+      icon: <HomeOutlined />,
+      label: "Dashboard",
+      children: [
+        { key: "overview", icon: <RiseOutlined />, label: "Overview" },
+        {
+          key: "inventory-history",
+          icon: <HistoryOutlined />,
+          label: "Inventory History",
+        },
+      ],
+    },
+    {
+      key: "report",
+      icon: <TableOutlined />,
+      label: "Report",
+      children: [
+        { key: "mris", icon: <UnorderedListOutlined />, label: "MRIS" },
+      ],
+    },
+    {
+      key: "inventory",
+      icon: <FileDoneOutlined />,
+      label: "Inventory",
+      children: [
+        { key: "item", icon: <HomeOutlined />, label: "Item" },
+        { key: "item-master", icon: <HomeOutlined />, label: "Item Master" },
+      ],
+    },
+    {
+      key: "logout",
+      icon: <LogoutOutlined />,
+      label: <span onClick={logout}>Logout</span>,
+    },
   ];
 
   return (
     <SidebarStyles $open={open}>
-      {/* Hamburger Button */}
       <Button
         className="menu-btn"
         type="text"
@@ -35,13 +70,17 @@ const Sidebar = () => {
         onClick={() => setOpen((prev) => !prev)}
       />
 
-      {/* Custom Sliding Sidebar for mobile */}
       <div className={`mobile-sidebar ${open ? "open" : ""}`}>
+        <Flex style={{ padding: "20px" }}>
+          <Image width={60} src={cabwadLogo} />
+        </Flex>
         <Menu mode="inline" defaultSelectedKeys={["1"]} items={menuItems} />
       </div>
 
-      {/* Desktop Sidebar */}
       <div className="desktop-sidebar">
+        <Flex style={{ padding: "20px" }}>
+          <Image width={60} src={cabwadLogo} />
+        </Flex>
         <Menu mode="inline" defaultSelectedKeys={["1"]} items={menuItems} />
       </div>
     </SidebarStyles>

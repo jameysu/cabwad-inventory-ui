@@ -18,30 +18,34 @@ const SidebarStyles = styled.div`
     }
   }
 
-  /* Mobile Sidebar */
   .mobile-sidebar {
     position: fixed;
     top: 0;
-    left: -220px; /* hidden offscreen */
+    left: -220px;
     width: 220px;
     height: 100vh;
-    background: #2c50a5; /* new shade */
+    background: #2c50a5;
     box-shadow: 2px 0 8px rgba(0, 0, 0, 0.1);
     transition: left 0.3s ease;
-    z-index: 1000; /* below hamburger */
+    z-index: 1000;
 
     &.open {
-      left: 0; /* slide in */
+      left: 0;
     }
 
     .ant-menu {
       height: 100%;
       border-inline-end: none;
-      background: transparent; /* inherit sidebar background */
-      color: #fff; /* text white */
+      background: transparent;
+      color: #fff;
     }
 
-    .ant-menu-item {
+    .ant-menu-item,
+    .ant-menu-submenu-title {
+      color: #fff !important;
+    }
+
+    .ant-menu-submenu-arrow {
       color: #fff !important;
     }
 
@@ -49,7 +53,8 @@ const SidebarStyles = styled.div`
       background-color: rgba(255, 255, 255, 0.2) !important;
     }
 
-    .ant-menu-item:hover {
+    .ant-menu-item:hover,
+    .ant-menu-submenu-title:hover {
       background-color: rgba(255, 255, 255, 0.1) !important;
     }
 
@@ -58,7 +63,6 @@ const SidebarStyles = styled.div`
     }
   }
 
-  /* Desktop Sidebar */
   .desktop-sidebar {
     display: none;
     height: 100vh;
@@ -66,8 +70,7 @@ const SidebarStyles = styled.div`
     position: fixed;
     top: 0;
     left: 0;
-    background: #2c50a5; /* new shade */
-    padding-top: 60px;
+    background: #2c50a5;
     box-shadow: 2px 0 8px rgba(0, 0, 0, 0.1);
 
     .ant-menu {
@@ -77,7 +80,12 @@ const SidebarStyles = styled.div`
       color: #fff;
     }
 
-    .ant-menu-item {
+    .ant-menu-item,
+    .ant-menu-submenu-title {
+      color: #fff !important;
+    }
+
+    .ant-menu-submenu-arrow {
       color: #fff !important;
     }
 
@@ -85,7 +93,8 @@ const SidebarStyles = styled.div`
       background-color: rgba(255, 255, 255, 0.2) !important;
     }
 
-    .ant-menu-item:hover {
+    .ant-menu-item:hover,
+    .ant-menu-submenu-title:hover {
       background-color: rgba(255, 255, 255, 0.1) !important;
     }
 

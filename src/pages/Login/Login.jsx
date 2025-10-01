@@ -12,13 +12,13 @@ const Login = () => {
   useEffect(() => {
     const token = localStorage.getItem("auth");
     if (token) {
-      navigate("/dashboard");
+      navigate("/portal");
     }
   }, [navigate]);
 
   const onLogin = () => {
     localStorage.setItem("auth", "test");
-    navigate("/dashboard");
+    navigate("/portal");
   };
 
   return (
