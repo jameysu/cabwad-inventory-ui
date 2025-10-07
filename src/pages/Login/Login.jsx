@@ -1,10 +1,10 @@
 import LoginStyles from "./Login.styles";
-import { Form, Button, Checkbox, Input, Image, Typography, Flex } from "antd";
+import { Form, Button, Input, Image, Typography, Flex } from "antd";
 import cabwadLogo from "../../assets/images/cabwad-logo.png";
 import { useNavigate } from "react-router-dom";
 import { useEffect } from "react";
 
-const { Text, Title } = Typography;
+const { Title } = Typography;
 
 const Login = () => {
   const navigate = useNavigate();

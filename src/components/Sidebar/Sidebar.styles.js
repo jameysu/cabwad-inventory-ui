@@ -4,13 +4,11 @@ const SidebarStyles = styled.div`
   /* Hamburger Button */
   .menu-btn {
     position: fixed;
-    top: 10px;
+    top: 20px;
     left: ${({ $open }) => ($open ? "310px" : "15px")};
     z-index: 1100;
     font-size: 20px;
-    background: #fff;
     border-radius: 8px;
-    // box-shadow: 0 4px 10px rgba(0, 0, 0, 0.15);
     transition: left 0.3s ease;
 
     @media (min-width: 768px) {
@@ -42,6 +40,10 @@ const SidebarStyles = styled.div`
     box-shadow: 2px 0 8px rgba(0, 0, 0, 0.1);
     transition: left 0.3s ease;
     z-index: 1000;
+
+    @media (min-width: 768px) {
+      display: none;
+    }
 
     &.open {
       left: 0;

@@ -3,6 +3,7 @@ import ThemeProvider from "./ThemeProvider.jsx";
 import Login from "./pages/Login/Login.jsx";
 import Portal from "./pages/Portal/Portal.jsx";
 import NotFound from "./pages/NotFound/NotFound.jsx";
+import "@ant-design/v5-patch-for-react-19";
 
 // ProtectedRoute Component to guard routes for authenticated users only
 function ProtectedRoute({ element }) {

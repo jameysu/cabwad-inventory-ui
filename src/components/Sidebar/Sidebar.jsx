@@ -9,6 +9,9 @@ import {
   RiseOutlined,
   HistoryOutlined,
   TableOutlined,
+  ContainerOutlined,
+  HddOutlined,
+  UserOutlined,
 } from "@ant-design/icons";
 import SidebarStyles from "./Sidebar.styles";
 import { Link, useNavigate } from "react-router-dom";
@@ -55,7 +58,11 @@ const Sidebar = () => {
       icon: <TableOutlined />,
       label: "Report",
       children: [
-        { key: "mris", icon: <UnorderedListOutlined />, label: "MRIS" },
+        {
+          key: "mris",
+          icon: <UnorderedListOutlined />,
+          label: <Link to="/portal/mris">MRIS</Link>,
+        },
       ],
     },
     {
@@ -63,9 +70,22 @@ const Sidebar = () => {
       icon: <FileDoneOutlined />,
       label: "Inventory",
       children: [
-        { key: "item", icon: <HomeOutlined />, label: "Item" },
-        { key: "item-master", icon: <HomeOutlined />, label: "Item Master" },
+        {
+          key: "item",
+          icon: <ContainerOutlined />,
+          label: <Link to="/portal/item">Item</Link>,
+        },
+        {
+          key: "item-master",
+          icon: <HddOutlined />,
+          label: <Link to="/portal/item-master">Item Master</Link>,
+        },
       ],
+    },
+    {
+      key: "user",
+      icon: <UserOutlined />,
+      label: <Link to="/portal/user-management">User Management</Link>,
     },
     {
       key: "logout",

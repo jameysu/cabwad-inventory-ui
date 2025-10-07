@@ -11,8 +11,8 @@ const PortalStyle = styled.div`
   }
 
   .topbar {
-    height: 50px;
-    border-bottom: 1px solid #dadde2ff;
+    height: 60px;
+    border-bottom: 1px solid #e3e5e9ff;
     display: flex;
     justify-content: flex-end;
   }

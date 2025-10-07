@@ -6,15 +6,12 @@ const NotFoundStyles = styled.div`
   justify-content: center;
   align-items: center;
   text-align: center;
-  background: linear-gradient(135deg, #0f2027, #203a43, #2c5364);
-  color: #fff;
   padding: 20px;
   overflow: hidden;
 
   .glitch-title {
     font-size: 8rem;
     font-weight: 800;
-    color: #fff;
     position: relative;
     text-transform: uppercase;
     animation: glitch 1s infinite;
@@ -42,23 +39,23 @@ const NotFoundStyles = styled.div`
   }
 
   /* Glitch animation */
-  @keyframes glitch {
-    0% {
-      text-shadow: 2px 2px #ff00c1, -2px -2px #00fff9;
-    }
-    25% {
-      text-shadow: -2px -2px #ff00c1, 2px 2px #00fff9;
-    }
-    50% {
-      text-shadow: 2px -2px #ff00c1, -2px 2px #00fff9;
-    }
-    75% {
-      text-shadow: -2px 2px #ff00c1, 2px -2px #00fff9;
-    }
-    100% {
-      text-shadow: 2px 2px #ff00c1, -2px -2px #00fff9;
-    }
-  }
+  // @keyframes glitch {
+  //   0% {
+  //     text-shadow: 2px 2px #ff00c1, -2px -2px #00fff9;
+  //   }
+  //   25% {
+  //     text-shadow: -2px -2px #ff00c1, 2px 2px #00fff9;
+  //   }
+  //   50% {
+  //     text-shadow: 2px -2px #ff00c1, -2px 2px #00fff9;
+  //   }
+  //   75% {
+  //     text-shadow: -2px 2px #ff00c1, 2px -2px #00fff9;
+  //   }
+  //   100% {
+  //     text-shadow: 2px 2px #ff00c1, -2px -2px #00fff9;
+  //   }
+  // }
 
   @media (max-width: 600px) {
     .glitch-title {
