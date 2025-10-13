@@ -1,17 +1,10 @@
 import { Typography, Card, Flex, Image } from "antd";
-import { useGetPostsMutation } from "../../services/jsonPlaceholderApi";
 import OverviewStyle from "./Overview.styles";
 import { DollarOutlined } from "@ant-design/icons";
-import coinIcon from "../../assets/icons/coins-icon.svg";
 
 const { Text, Title } = Typography;
 
 const Overview = () => {
-  const [
-    getPosts,
-    { data: posts, error: getPostsFailed, isLoading: getPostsLoading },
-  ] = useGetPostsMutation();
-  console.log(posts);
   return (
     <OverviewStyle>
       <Flex justify="space-around" wrap gap={10}>

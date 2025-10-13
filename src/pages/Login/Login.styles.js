@@ -10,7 +10,6 @@ const LoginStyles = styled.div`
   padding: 20px;
   overflow: hidden;
 
-  /* Background with gradient + blur */
   &::before {
     content: "";
     position: absolute;
@@ -75,7 +74,6 @@ const LoginStyles = styled.div`
     }
   }
 
-  /* Mobile */
   @media (max-width: 480px) {
     .ant-form {
       padding: 25px 20px;

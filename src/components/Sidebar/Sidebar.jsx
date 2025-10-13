@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { Button, Flex, Image, Menu, Typography } from "antd";
+import { Button, Flex, Image, Menu, message, Typography } from "antd";
 import {
   MenuOutlined,
   HomeOutlined,
@@ -20,17 +20,27 @@ import cabwadLogo from "../../assets/images/cabwad-logo.png";
 const { Text } = Typography;
 
 const Sidebar = () => {
-  const [open, setOpen] = useState(false);
   const navigate = useNavigate();
+  const [messageApi, contextHolder] = message.useMessage();
 
-  const logout = () => {
-    localStorage.removeItem("auth");
-    navigate("/");
+  const [open, setOpen] = useState(false);
+
+  const handleLogout = () => {
+    messageApi
+      .success({
+        content: "Logout successful!",
+        key: "logout-success",
+        duration: 3,
+      })
+      .then(() => {
+        localStorage.removeItem("token");
+        navigate("/");
+      });
   };
 
   const handleMenuClick = (e) => {
-    setOpen(false); // close on menu click
-    if (e.key === "logout") logout();
+    setOpen(false);
+    if (e.key === "logout") handleLogout();
   };
 
   const menuItems = [
@@ -95,51 +105,54 @@ const Sidebar = () => {
   ];
 
   return (
-    <SidebarStyles $open={open}>
-      <Button
-        className="menu-btn"
-        type="text"
-        icon={<MenuOutlined />}
-        onClick={() => setOpen((prev) => !prev)}
-      />
-
-      {/* Overlay backdrop */}
-      {open && (
-        <div className="sidebar-overlay" onClick={() => setOpen(false)} />
-      )}
-
-      <div className={`mobile-sidebar ${open ? "open" : ""}`}>
-        <Flex gap={5} style={{ padding: "20px" }}>
-          <Image width={60} preview={false} src={cabwadLogo} />
-          <Flex vertical justify="center" style={{ color: "white" }}>
-            <Text>Republic of the Philippines</Text>
-            <Text>CABUYAO WATER DISTRICT</Text>
-          </Flex>
-        </Flex>
-        <Menu
-          mode="inline"
-          defaultSelectedKeys={["overview"]}
-          items={menuItems}
-          onClick={handleMenuClick}
+    <>
+      {contextHolder}
+      <SidebarStyles $open={open}>
+        <Button
+          className="menu-btn"
+          type="text"
+          icon={<MenuOutlined />}
+          onClick={() => setOpen((prev) => !prev)}
         />
-      </div>
 
-      <div className="desktop-sidebar">
-        <Flex gap={5} style={{ padding: "20px" }}>
-          <Image width={60} preview={false} src={cabwadLogo} />
-          <Flex vertical justify="center">
-            <Text>Republic of the Philippines</Text>
-            <Text>CABUYAO WATER DISTRICT</Text>
+        {/* Overlay backdrop */}
+        {open && (
+          <div className="sidebar-overlay" onClick={() => setOpen(false)} />
+        )}
+
+        <div className={`mobile-sidebar ${open ? "open" : ""}`}>
+          <Flex gap={5} style={{ padding: "20px" }}>
+            <Image width={60} preview={false} src={cabwadLogo} />
+            <Flex vertical justify="center" style={{ color: "white" }}>
+              <Text>Republic of the Philippines</Text>
+              <Text>CABUYAO WATER DISTRICT</Text>
+            </Flex>
           </Flex>
-        </Flex>
-        <Menu
-          mode="inline"
-          defaultSelectedKeys={["overview"]}
-          items={menuItems}
-          onClick={handleMenuClick}
-        />
-      </div>
-    </SidebarStyles>
+          <Menu
+            mode="inline"
+            defaultSelectedKeys={["overview"]}
+            items={menuItems}
+            onClick={handleMenuClick}
+          />
+        </div>
+
+        <div className="desktop-sidebar">
+          <Flex gap={5} style={{ padding: "20px" }}>
+            <Image width={60} preview={false} src={cabwadLogo} />
+            <Flex vertical justify="center">
+              <Text>Republic of the Philippines</Text>
+              <Text>CABUYAO WATER DISTRICT</Text>
+            </Flex>
+          </Flex>
+          <Menu
+            mode="inline"
+            defaultSelectedKeys={["overview"]}
+            items={menuItems}
+            onClick={handleMenuClick}
+          />
+        </div>
+      </SidebarStyles>
+    </>
   );
 };
 

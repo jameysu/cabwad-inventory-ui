@@ -5,9 +5,8 @@ import Portal from "./pages/Portal/Portal.jsx";
 import NotFound from "./pages/NotFound/NotFound.jsx";
 import "@ant-design/v5-patch-for-react-19";
 
-// ProtectedRoute Component to guard routes for authenticated users only
 function ProtectedRoute({ element }) {
-  const token = localStorage.getItem("auth");
+  const token = localStorage.getItem("token");
 
   if (!token) {
     return <Navigate to="/" />;

@@ -4,10 +4,10 @@ const PortalStyle = styled.div`
   display: flex;
   flex-direction: column;
   flex: 1;
-  margin-left: 0 !important; /* default: mobile & tablet */
+  margin-left: 0 !important;
 
   @media (min-width: 768px) {
-    margin-left: 300px !important; /* only desktop and up */
+    margin-left: 300px !important;
   }
 
   .topbar {

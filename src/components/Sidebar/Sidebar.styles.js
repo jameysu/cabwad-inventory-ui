@@ -4,7 +4,7 @@ const SidebarStyles = styled.div`
   /* Hamburger Button */
   .menu-btn {
     position: fixed;
-    top: 20px;
+    top: 15px;
     left: ${({ $open }) => ($open ? "310px" : "15px")};
     z-index: 1100;
     font-size: 20px;
