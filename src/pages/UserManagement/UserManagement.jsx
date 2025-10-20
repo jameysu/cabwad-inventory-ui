@@ -78,7 +78,7 @@ const UserManagement = () => {
 
   return (
     <UserManagementStyled>
-      <Flex justify="space-between" align="center" style={{ marginBottom: 16 }}>
+      <Flex gap={20} align="center" style={{ marginBottom: 16 }}>
         <Search
           placeholder="Search users"
           onSearch={handleSearch}
