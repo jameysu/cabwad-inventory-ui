@@ -12,7 +12,31 @@ export const authApi = createApi({
         body: credentials,
       }),
     }),
+    getUsers: builder.query({
+      query: () => "auth/users",
+    }),
+    addUser: builder.mutation({
+      query: (body) => ({
+        url: "auth/add-user",
+        method: "POST",
+        body,
+      }),
+      invalidatesTags: ["Users"],
+    }),
+    updateUser: builder.mutation({
+      query: (body) => ({
+        url: "auth/update-user",
+        method: "PUT",
+        body,
+      }),
+      invalidatesTags: ["Users"],
+    }),
   }),
 });
 
-export const { useLoginMutation } = authApi;
+export const {
+  useLoginMutation,
+  useGetUsersQuery,
+  useAddUserMutation,
+  useUpdateUserMutation,
+} = authApi;

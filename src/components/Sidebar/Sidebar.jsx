@@ -25,6 +25,9 @@ const Sidebar = () => {
 
   const [open, setOpen] = useState(false);
 
+  const identity = localStorage.getItem("identity");
+  const role = JSON.parse(identity).usertype;
+
   const handleLogout = () => {
     messageApi
       .success({
@@ -43,7 +46,7 @@ const Sidebar = () => {
     if (e.key === "logout") handleLogout();
   };
 
-  const menuItems = [
+  let menuItems = [
     {
       key: "dashboard",
       icon: <HomeOutlined />,
@@ -93,16 +96,19 @@ const Sidebar = () => {
       ],
     },
     {
-      key: "user",
-      icon: <UserOutlined />,
-      label: <Link to="/portal/user-management">User Management</Link>,
-    },
-    {
       key: "logout",
       icon: <LogoutOutlined />,
       label: "Logout",
     },
   ];
+
+  if (role === 1) {
+    menuItems.splice(menuItems.length - 1, 0, {
+      key: "user",
+      icon: <UserOutlined />,
+      label: <Link to="/portal/user-management">User Management</Link>,
+    });
+  }
 
   return (
     <>
@@ -115,7 +121,6 @@ const Sidebar = () => {
           onClick={() => setOpen((prev) => !prev)}
         />
 
-        {/* Overlay backdrop */}
         {open && (
           <div className="sidebar-overlay" onClick={() => setOpen(false)} />
         )}

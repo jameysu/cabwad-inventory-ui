@@ -32,6 +32,7 @@ const Login = () => {
         })
         .then(() => {
           localStorage.setItem("token", loginSuccess.token);
+          localStorage.setItem("identity", JSON.stringify(loginSuccess.user));
           navigate("/portal");
         });
     }

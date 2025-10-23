@@ -8,7 +8,25 @@ export const itemApi = createApi({
     getItems: builder.query({
       query: () => "item/get-all",
     }),
+    createItem: builder.mutation({
+      query: (item) => ({
+        url: "item/create",
+        method: "POST",
+        body: item,
+      }),
+    }),
+    updateItem: builder.mutation({
+      query: (newItem) => ({
+        url: "item/update",
+        method: "PUT",
+        body: newItem,
+      }),
+    }),
   }),
 });
 
-export const { useGetItemsQuery } = itemApi;
+export const {
+  useGetItemsQuery,
+  useCreateItemMutation,
+  useUpdateItemMutation,
+} = itemApi;

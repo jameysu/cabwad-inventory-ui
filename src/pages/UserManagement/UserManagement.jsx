@@ -1,65 +1,68 @@
-import React, { useState } from "react";
+import React, { useState, useMemo } from "react";
 import UserManagementStyled from "./UserManagement.styles";
-import { Table, Button, Space, Input, Flex, Card } from "antd";
+import { Table, Button, Space, Input, Flex, Card, Spin, message } from "antd";
 import { Grid } from "antd";
+import { useGetUsersQuery } from "../../services/authApi";
+import UserModal from "./UserModal";
 
 const { Search } = Input;
 const { useBreakpoint } = Grid;
 
 const UserManagement = () => {
-  const [data, setData] = useState([
-    {
-      key: "1",
-      username: "johndoe",
-      usertype: "admin",
-      email: "johndoe@example.com",
-    },
-    {
-      key: "2",
-      username: "janesmith",
-      usertype: "editor",
-      email: "janesmith@example.com",
-    },
-    {
-      key: "3",
-      username: "mikebrown",
-      usertype: "viewer",
-      email: "mikebrown@example.com",
-    },
-    {
-      key: "4",
-      username: "sarahlee",
-      usertype: "admin",
-      email: "sarahlee@example.com",
-    },
-    {
-      key: "5",
-      username: "davidkim",
-      usertype: "editor",
-      email: "davidkim@example.com",
-    },
-  ]);
+  const {
+    data: getUserSuccess,
+    isLoading: getUsersLoading,
+    isError: getUsersFailed,
+    refetch,
+  } = useGetUsersQuery();
 
   const [searchText, setSearchText] = useState("");
+  const [openModal, setOpenModal] = useState(false);
+  const [selectedUser, setSelectedUser] = useState(null);
   const screens = useBreakpoint();
 
-  const handleUpdate = (record) => console.log("Update user:", record);
-  const handleDelete = (record) => console.log("Delete user:", record);
-  const handleAddUser = () => console.log("Add user clicked");
+  const handleAddUser = () => {
+    setSelectedUser(null);
+    setOpenModal(true);
+  };
+
+  const handleUpdate = (record) => {
+    setSelectedUser(record);
+    setOpenModal(true);
+  };
+
+  const handleDelete = (record) => {
+    console.log("Delete user:", record);
+    message.info("Delete API to be implemented");
+  };
 
   const handleSearch = (value) => setSearchText(value.toLowerCase());
 
-  const filteredData = data.filter(
+  const users = useMemo(() => {
+    if (getUserSuccess?.success && Array.isArray(getUserSuccess.users)) {
+      return getUserSuccess.users.map((user) => ({
+        key: user.id,
+        username: user.username,
+        email: user.email,
+        usertypename: user.usertypename || "N/A",
+        usertype: user.usertype,
+        createdAt: user.createdAt,
+      }));
+    }
+    return [];
+  }, [getUserSuccess]);
+
+  const filteredData = users.filter(
     (item) =>
       item.username.toLowerCase().includes(searchText) ||
       item.email.toLowerCase().includes(searchText) ||
-      item.usertype.toLowerCase().includes(searchText)
+      item.usertypename.toLowerCase().includes(searchText)
   );
 
   const columns = [
     { title: "Username", dataIndex: "username", key: "username" },
     { title: "Email", dataIndex: "email", key: "email" },
-    { title: "User Type", dataIndex: "usertype", key: "usertype" },
+    { title: "User Type", dataIndex: "usertypename", key: "usertypename" },
     {
       title: "Actions",
       key: "actions",
@@ -75,6 +78,18 @@ const UserManagement = () => {
       ),
     },
   ];
+
+  if (getUsersLoading)
+    return (
+      <Flex justify="center" align="center" style={{ minHeight: "60vh" }}>
+        <Spin size="large" />
+      </Flex>
+    );
+
+  if (getUsersFailed) {
+    message.error("Failed to fetch users");
+    return <p style={{ textAlign: "center" }}>Failed to load users.</p>;
+  }
 
   return (
     <UserManagementStyled>
@@ -94,30 +109,39 @@ const UserManagement = () => {
       {screens.md ? (
         <Table dataSource={filteredData} columns={columns} pagination={false} />
       ) : (
-        <Flex vertical gap={12}>
+        <Flex vertical gap={16}>
           {filteredData.map((user) => (
-            <Card key={user.key} size="small">
-              <p>
-                <b>Username:</b> {user.username}
-              </p>
-              <p>
+            <Card key={user.key} size="small" bordered className="user-card">
+              <p className="username">{user.username}</p>
+              <p className="detail">
                 <b>Email:</b> {user.email}
               </p>
-              <p>
-                <b>User Type:</b> {user.usertype}
+              <p className="detail">
+                <b>User Type:</b> {user.usertypename}
               </p>
-              <Space>
-                <Button type="primary" onClick={() => handleUpdate(user)}>
+              <div className="actions">
+                <Button
+                  type="primary"
+                  size="small"
+                  onClick={() => handleUpdate(user)}
+                >
                   Update
                 </Button>
-                <Button danger onClick={() => handleDelete(user)}>
+                <Button danger size="small" onClick={() => handleDelete(user)}>
                   Delete
                 </Button>
-              </Space>
+              </div>
             </Card>
           ))}
         </Flex>
       )}
+
+      <UserModal
+        open={openModal}
+        onCancel={() => setOpenModal(false)}
+        selectedUser={selectedUser}
+        refetch={refetch}
+      />
     </UserManagementStyled>
   );
 };

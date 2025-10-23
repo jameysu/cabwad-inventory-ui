@@ -1,12 +1,11 @@
 import styled from "styled-components";
 
 const SidebarStyles = styled.div`
-  /* Hamburger Button */
   .menu-btn {
     position: fixed;
     top: 15px;
     left: ${({ $open }) => ($open ? "310px" : "15px")};
-    z-index: 1100;
+    z-index: 900;
     font-size: 20px;
     border-radius: 8px;
     transition: left 0.3s ease;
@@ -26,8 +25,8 @@ const SidebarStyles = styled.div`
     left: 0;
     right: 0;
     bottom: 0;
-    // background: rgba(0, 0, 0, 0.4);
-    z-index: 900; /* below sidebar (1000), above content */
+    /* background: rgba(0, 0, 0, 0.4); */
+    z-index: 800;
   }
 
   .mobile-sidebar {
@@ -39,7 +38,7 @@ const SidebarStyles = styled.div`
     background: #2c50a5;
     box-shadow: 2px 0 8px rgba(0, 0, 0, 0.1);
     transition: left 0.3s ease;
-    z-index: 1000;
+    z-index: 850;
 
     @media (min-width: 768px) {
       display: none;
@@ -88,6 +87,7 @@ const SidebarStyles = styled.div`
     left: 0;
     background: #2c50a5;
     box-shadow: 2px 0 8px rgba(0, 0, 0, 0.1);
+    z-index: 850;
 
     .ant-menu {
       height: 100%;
