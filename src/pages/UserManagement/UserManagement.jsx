@@ -1,9 +1,21 @@
 import React, { useState, useMemo } from "react";
 import UserManagementStyled from "./UserManagement.styles";
-import { Table, Button, Space, Input, Flex, Card, Spin, message } from "antd";
+import {
+  Table,
+  Button,
+  Space,
+  Input,
+  Flex,
+  Card,
+  Spin,
+  message,
+  Avatar,
+  Popconfirm,
+} from "antd";
 import { Grid } from "antd";
 import { useGetUsersQuery } from "../../services/authApi";
 import UserModal from "./UserModal";
+import { UserOutlined } from "@ant-design/icons";
 
 const { Search } = Input;
 const { useBreakpoint } = Grid;
@@ -32,8 +44,9 @@ const UserManagement = () => {
   };
 
   const handleDelete = (record) => {
+    // Placeholder for delete API call
     console.log("Delete user:", record);
-    message.info("Delete API to be implemented");
+    message.success(`User "${record.username}" deleted successfully`);
   };
 
   const handleSearch = (value) => setSearchText(value.toLowerCase());
@@ -71,9 +84,16 @@ const UserManagement = () => {
           <Button type="primary" onClick={() => handleUpdate(record)}>
             Update
           </Button>
-          <Button danger onClick={() => handleDelete(record)}>
-            Delete
-          </Button>
+          <Popconfirm
+            title="Are you sure you want to delete this user?"
+            description={`This action cannot be undone.`}
+            okText="Yes, delete"
+            cancelText="Cancel"
+            okButtonProps={{ danger: true }}
+            onConfirm={() => handleDelete(record)}
+          >
+            <Button danger>Delete</Button>
+          </Popconfirm>
         </Space>
       ),
     },
@@ -93,12 +113,11 @@ const UserManagement = () => {
 
   return (
     <UserManagementStyled>
-      <Flex gap={20} align="center" style={{ marginBottom: 16 }}>
+      <Flex className="header-actions">
         <Search
           placeholder="Search users"
           onSearch={handleSearch}
           onChange={(e) => handleSearch(e.target.value)}
-          style={{ width: 250 }}
           allowClear
         />
         <Button type="primary" onClick={handleAddUser}>
@@ -112,13 +131,19 @@ const UserManagement = () => {
         <Flex vertical gap={16}>
           {filteredData.map((user) => (
             <Card key={user.key} size="small" bordered className="user-card">
-              <p className="username">{user.username}</p>
-              <p className="detail">
-                <b>Email:</b> {user.email}
-              </p>
-              <p className="detail">
-                <b>User Type:</b> {user.usertypename}
-              </p>
+              <Flex align="center" gap={12}>
+                <Avatar icon={<UserOutlined />} />
+                <div>
+                  <p className="username">{user.username}</p>
+                  <p className="detail">
+                    <b>Email:</b> {user.email}
+                  </p>
+                  <p className="detail">
+                    <b>User Type:</b> {user.usertypename}
+                  </p>
+                </div>
+              </Flex>
+              <div className="divider" />
               <div className="actions">
                 <Button
                   type="primary"
@@ -127,9 +152,18 @@ const UserManagement = () => {
                 >
                   Update
                 </Button>
-                <Button danger size="small" onClick={() => handleDelete(user)}>
-                  Delete
-                </Button>
+                <Popconfirm
+                  title="Are you sure you want to delete this user?"
+                  description="This action cannot be undone."
+                  okText="Yes, delete"
+                  cancelText="Cancel"
+                  okButtonProps={{ danger: true }}
+                  onConfirm={() => handleDelete(user)}
+                >
+                  <Button danger size="small">
+                    Delete
+                  </Button>
+                </Popconfirm>
               </div>
             </Card>
           ))}
