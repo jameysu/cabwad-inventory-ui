@@ -21,7 +21,7 @@ const ItemStyles = styled.div`
       border-radius: 8px;
       box-shadow: 0 2px 6px rgba(0, 0, 0, 0.05);
 
-      @media (max-width: 425px) {
+      @media (max-width: 768px) {
         width: 100% !important;
       }
     }

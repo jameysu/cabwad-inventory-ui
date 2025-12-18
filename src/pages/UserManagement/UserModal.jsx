@@ -96,8 +96,8 @@ const UserModal = ({ open, onCancel, selectedUser, refetch }) => {
         >
           <Select placeholder="Select user type">
             <Option value="1">ADMIN</Option>
-            <Option value="2">EDITOR</Option>
-            <Option value="3">VIEWER</Option>
+            <Option value="2">ENGINEER</Option>
+            <Option value="3">INVENTORY</Option>
           </Select>
         </Form.Item>
       </Form>

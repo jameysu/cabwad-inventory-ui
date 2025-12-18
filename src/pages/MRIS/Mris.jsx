@@ -1,4 +1,4 @@
-import React, { useState, useMemo } from "react";
+import React, { useState, useEffect, useMemo } from "react";
 import {
   Table,
   Button,
@@ -19,6 +19,7 @@ import dayjs from "dayjs";
 import isSameOrAfter from "dayjs/plugin/isSameOrAfter";
 import isSameOrBefore from "dayjs/plugin/isSameOrBefore";
 import MrisStyles from "./Mris.styles";
+import { Html5Qrcode } from "html5-qrcode";
 
 dayjs.extend(isSameOrAfter);
 dayjs.extend(isSameOrBefore);
@@ -38,7 +39,47 @@ const Mris = () => {
   const [downloadFilter, setDownloadFilter] = useState([]);
   const [startDate, setStartDate] = useState(null);
   const [endDate, setEndDate] = useState(null);
+
   const screens = useBreakpoint();
+
+  const [isQRModalOpen, setIsQRModalOpen] = useState(false);
+  const [qrScanner, setQrScanner] = useState(null);
+
+  useEffect(() => {
+    if (!isQRModalOpen) return;
+
+    const timeout = setTimeout(() => {
+      const qrElement = document.getElementById("qr-reader");
+      if (!qrElement) {
+        message.error("QR reader element not found");
+        return;
+      }
+
+      const scanner = new Html5Qrcode("qr-reader");
+      setQrScanner(scanner);
+
+      scanner
+        .start(
+          { facingMode: "environment" }, // back camera
+          { fps: 10, qrbox: 250 },
+          (decodedText) => {
+            message.success(`QR Scanned: ${decodedText}`);
+            scanner.stop().catch(() => {});
+            setIsQRModalOpen(false);
+
+            // handle scanned value here
+          },
+          (error) => {
+            // ignore scan errors
+          }
+        )
+        .catch(() => {
+          message.error("Camera access denied or unavailable");
+        });
+    }, 300);
+
+    return () => clearTimeout(timeout);
+  }, [isQRModalOpen]);
 
   const data = [
     {
@@ -247,6 +288,10 @@ const Mris = () => {
 
         <Col>
           <Space wrap>
+            <Button type="primary" onClick={() => setIsQRModalOpen(true)}>
+              Create Request
+            </Button>
+
             <Button type="primary" onClick={handleOpenModal}>
               Download Record
             </Button>
@@ -369,6 +414,74 @@ const Mris = () => {
             style={{ display: "flex", gap: 8 }}
           />
         </Space>
+      </Modal>
+      <Modal
+        title="Scan QR Code"
+        open={isQRModalOpen}
+        onCancel={() => {
+          qrScanner?.stop().catch(() => {});
+          setIsQRModalOpen(false);
+        }}
+        footer={null}
+        centered
+        destroyOnClose
+        afterClose={() => {
+          setQrScanner(null); // cleanup
+        }}
+      >
+        <div
+          id="qr-reader"
+          style={{
+            width: "100%",
+            minHeight: 300,
+          }}
+        />
+
+        <div style={{ marginTop: 16, textAlign: "center" }}>
+          <input
+            type="file"
+            accept="image/*"
+            onChange={async (e) => {
+              const file = e.target.files?.[0];
+              if (!file || !qrScanner) return;
+
+              try {
+                // Stop camera before scanning file
+                await qrScanner.stop().catch(() => {});
+
+                // Scan uploaded image
+                const decodedText = await qrScanner.scanFile(file, true);
+                message.success(`QR Scanned: ${decodedText}`);
+
+                setIsQRModalOpen(false);
+
+                // 👉 handle scanned value here (create request, fetch item, etc.)
+              } catch (err) {
+                console.error(err);
+                message.error("Failed to scan QR from image.");
+              } finally {
+                // Restart camera if modal still open
+                if (isQRModalOpen) {
+                  qrScanner
+                    .start(
+                      { facingMode: "environment" },
+                      { fps: 10, qrbox: 250 },
+                      (decodedText) => {
+                        message.success(`QR Scanned: ${decodedText}`);
+                        qrScanner.stop().catch(() => {});
+                        setIsQRModalOpen(false);
+
+                        // handle scanned value here
+                      }
+                    )
+                    .catch(() => {});
+                }
+              }
+            }}
+          />
+
+          <div style={{ fontSize: 12, opacity: 0.7 }}>Or upload QR image</div>
+        </div>
       </Modal>
     </MrisStyles>
   );

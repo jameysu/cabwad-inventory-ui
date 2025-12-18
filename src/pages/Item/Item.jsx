@@ -7,15 +7,22 @@ import {
   Input,
   Table,
   message,
-  Card,
   Typography,
   Spin,
+  Modal,
+  Form,
+  Select,
+  List,
 } from "antd";
 import { EllipsisOutlined } from "@ant-design/icons";
 import ItemModal from "./ItemModal";
 import jsPDF from "jspdf";
 import QRCode from "qrcode";
-import { useGetItemsQuery } from "../../services/itemApi";
+import {
+  useDeleteItemMutation,
+  useGetItemsQuery,
+} from "../../services/itemApi";
+import { DeleteOutlined } from "@ant-design/icons";
 
 const { Search } = Input;
 const { Text, Title } = Typography;
@@ -28,10 +35,26 @@ const Item = () => {
     refetch,
   } = useGetItemsQuery();
 
+  const [
+    deleteItem,
+    {
+      data: deleteItemSuccess,
+      isLoading: deleteItemLoading,
+      isError: deleteItemFailed,
+    },
+  ] = useDeleteItemMutation();
+
+  const [generateQRForm] = Form.useForm();
+  const transactionType = Form.useWatch("transaction_type", generateQRForm);
+
   const [openModal, setOpenModal] = useState(false);
   const [selectedItem, setSelectedItem] = useState(null);
   const [isMobile, setIsMobile] = useState(window.innerWidth <= 768);
   const [searchTerm, setSearchTerm] = useState("");
+  const [openQRModal, setOpenQRModal] = useState(false);
+  const [qrItems, setQrItems] = useState([]);
+  const [generatedQR, setGeneratedQR] = useState(null);
+  const [qrPayload, setQrPayload] = useState(null);
 
   const items = useMemo(() => {
     if (!fetchItemSuccess?.items) return [];
@@ -67,6 +90,16 @@ const Item = () => {
     return () => window.removeEventListener("resize", handleResize);
   }, []);
 
+  useEffect(() => {
+    if (deleteItemSuccess && !deleteItemLoading) {
+      refetch();
+      message.success("Item deleted successfully");
+    }
+    if (deleteItemFailed && !deleteItemLoading) {
+      message.error("Failed to delete item");
+    }
+  }, [deleteItemFailed, deleteItemLoading, deleteItemSuccess, refetch]);
+
   const handleAdd = () => {
     setSelectedItem(null);
     setOpenModal(true);
@@ -99,8 +132,83 @@ const Item = () => {
     }
   };
 
-  const handleDelete = (record) => {
-    message.success(`${record.item} deleted successfully`);
+  const handleDelete = (id) => {
+    deleteItem(id);
+  };
+
+  const handleGenerateQR = () => {
+    setOpenQRModal(true);
+  };
+
+  const handleSubmitGenerateQR = async () => {
+    const stocks = qrItems.map((stock) => ({
+      ...stock,
+      transactionType,
+    }));
+
+    const payload = { stocks };
+
+    try {
+      const qrString = JSON.stringify(payload);
+      const qrImage = await QRCode.toDataURL(qrString);
+
+      setQrPayload(payload);
+      setGeneratedQR(qrImage);
+
+      setQrItems([]);
+      generateQRForm.resetFields();
+      setOpenQRModal(false);
+    } catch (err) {
+      message.error("Failed to generate QR");
+    }
+  };
+
+  const handleAddQRItem = () => {
+    const values = generateQRForm.getFieldsValue();
+
+    if (!values.item || !values.quantity) {
+      message.warning("Please complete all fields before adding");
+      return;
+    }
+
+    const selectedItem = items.find((i) => i.key === values.item);
+
+    if (!selectedItem) {
+      message.error("Selected item not found");
+      return;
+    }
+
+    setQrItems((prev) => {
+      const existingIndex = prev.findIndex((item) => item.id === values.item);
+
+      // ✅ If item already exists → add quantity
+      if (existingIndex !== -1) {
+        const updated = [...prev];
+        updated[existingIndex] = {
+          ...updated[existingIndex],
+          quantity:
+            Number(updated[existingIndex].quantity) + Number(values.quantity),
+        };
+        return updated;
+      }
+
+      // ✅ Otherwise → add new item
+      return [
+        ...prev,
+        {
+          id: values.item,
+          name: `${selectedItem.brand} ${selectedItem.item}`,
+          price: Number(selectedItem.price),
+          quantity: Number(values.quantity),
+        },
+      ];
+    });
+
+    generateQRForm.resetFields(["item", "quantity"]);
+  };
+
+  const handleRemoveQRItem = (index) => {
+    setQrItems((prev) => prev.filter((_, i) => i !== index));
   };
 
   const columns = [
@@ -125,7 +233,7 @@ const Item = () => {
           {
             key: "delete",
             label: "Delete",
-            onClick: () => handleDelete(record),
+            onClick: () => handleDelete(record.id),
           },
         ];
 
@@ -144,17 +252,9 @@ const Item = () => {
 
   if (fetchItemLoading)
     return (
-      <div
-        style={{
-          display: "flex",
-          justifyContent: "center",
-          alignItems: "center",
-          height: "80vh",
-          width: "100%",
-        }}
-      >
-        <Spin tip="Loading items..." />
-      </div>
+      <Spin tip="Loading items...">
+        <div style={{ height: "80vh" }} />
+      </Spin>
     );
   if (fetchItemFailed) return <Text type="danger">Failed to load items.</Text>;
 
@@ -162,7 +262,7 @@ const Item = () => {
     <ItemStyles>
       <Flex
         className="search-container"
-        gap={20}
+        gap={10}
         align="center"
         style={{ marginBottom: 16, flexWrap: "wrap" }}
       >
@@ -175,6 +275,9 @@ const Item = () => {
         />
         <Button type="primary" onClick={handleAdd}>
           Add Item
+        </Button>
+        <Button type="primary" onClick={handleGenerateQR}>
+          Generate Request
         </Button>
       </Flex>
 
@@ -208,7 +311,7 @@ const Item = () => {
                       {
                         key: "delete",
                         label: "Delete",
-                        onClick: () => handleDelete(record),
+                        onClick: () => handleDelete(record.key),
                       },
                     ],
                   }}
@@ -247,6 +350,129 @@ const Item = () => {
         selectedItem={selectedItem}
         refetch={refetch}
       />
+      {generatedQR && (
+        <Modal
+          open={true}
+          footer={null}
+          onCancel={() => setGeneratedQR(null)}
+          centered
+          title="Generated QR Code"
+        >
+          <Flex vertical align="center" gap={16}>
+            <img
+              src={generatedQR}
+              alt="Generated QR"
+              style={{ width: 250, height: 250 }}
+            />
+
+            <Button
+              type="primary"
+              onClick={() => {
+                const link = document.createElement("a");
+                link.href = generatedQR;
+                link.download = "request-qr.png";
+                link.click();
+              }}
+            >
+              Download QR
+            </Button>
+          </Flex>
+        </Modal>
+      )}
+      <Modal
+        open={openQRModal}
+        onCancel={() => setOpenQRModal(false)}
+        title="Generate Request"
+        centered
+        footer={[
+          <Button key="cancel" onClick={() => setOpenQRModal(false)}>
+            Cancel
+          </Button>,
+          <Button
+            key="generate"
+            type="primary"
+            onClick={() => handleSubmitGenerateQR()}
+            disabled={!qrItems.length || !transactionType}
+          >
+            Generate
+          </Button>,
+        ]}
+      >
+        <Form
+          layout="vertical"
+          form={generateQRForm}
+          onFinish={handleSubmitGenerateQR}
+        >
+          <Form.Item name="item" label="Item">
+            <Select
+              showSearch
+              placeholder={"Choose item to add"}
+              optionFilterProp="children"
+              filterOption={(input, option) =>
+                option?.children
+                  ?.toString()
+                  .toLowerCase()
+                  .includes(input.toLowerCase())
+              }
+            >
+              {filteredItems.map((item) => {
+                return (
+                  <Option value={item.key} key={item.key}>
+                    {`${item.brand} ${item.item}`}
+                  </Option>
+                );
+              })}
+            </Select>
+          </Form.Item>
+          <Form.Item
+            name="quantity"
+            label="Quantity"
+            rules={[
+              {
+                validator: (_, value) =>
+                  value && Number(value) > 0
+                    ? Promise.resolve()
+                    : Promise.reject(
+                        new Error("Quantity must be greater than 0")
+                      ),
+              },
+            ]}
+          >
+            <Input type="number" placeholder="Enter quantity" />
+          </Form.Item>
+          <Button type="dashed" block onClick={handleAddQRItem}>
+            Add Item
+          </Button>
+          {!!qrItems.length && (
+            <List
+              style={{ marginTop: 16 }}
+              bordered
+              dataSource={qrItems}
+              renderItem={(item, index) => (
+                <List.Item
+                  actions={[
+                    <Button
+                      type="text"
+                      danger
+                      icon={<DeleteOutlined />}
+                      onClick={() => handleRemoveQRItem(index)}
+                    />,
+                  ]}
+                >
+                  {item.name} — {item.quantity} pcs
+                </List.Item>
+              )}
+            />
+          )}
+          <Form.Item name="transaction_type" label="Request Type">
+            <Select placeholder={"Choose request"}>
+              <Option value={1}>Stock In</Option>
+              <Option value={2}>Stock Out</Option>
+              <Option value={3}>Return</Option>
+            </Select>
+          </Form.Item>
+        </Form>
+      </Modal>
     </ItemStyles>
   );
 };

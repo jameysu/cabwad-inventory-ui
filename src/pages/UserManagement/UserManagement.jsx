@@ -40,6 +40,7 @@ const UserManagement = () => {
 
   const handleUpdate = (record) => {
     setSelectedUser(record);
+    console.log("record", record);
     setOpenModal(true);
   };
 
@@ -130,7 +131,7 @@ const UserManagement = () => {
       ) : (
         <Flex vertical gap={16}>
           {filteredData.map((user) => (
-            <Card key={user.key} size="small" bordered className="user-card">
+            <Card key={user.key} size="small" className="user-card">
               <Flex align="center" gap={12}>
                 <Avatar icon={<UserOutlined />} />
                 <div>

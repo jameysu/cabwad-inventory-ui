@@ -22,6 +22,14 @@ export const itemApi = createApi({
         body: newItem,
       }),
     }),
+    deleteItem: builder.mutation({
+      query: (id) => ({
+        url: "item/remove",
+        method: "DELETE",
+        body: { id },
+      }),
+      invalidatesTags: ["Items"],
+    }),
   }),
 });
 
@@ -29,4 +37,5 @@ export const {
   useGetItemsQuery,
   useCreateItemMutation,
   useUpdateItemMutation,
+  useDeleteItemMutation,
 } = itemApi;

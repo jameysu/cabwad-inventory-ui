@@ -50,8 +50,10 @@ const ItemModal = ({ open, onClose, selectedItem, refetch }) => {
           quantity: selectedItem.quantity,
           ...payload,
         }).unwrap();
+        form.resetFields();
       } else {
         response = await createItem(payload).unwrap();
+        form.resetFields();
       }
 
       hide();

@@ -50,50 +50,50 @@ const Sidebar = () => {
     {
       key: "dashboard",
       icon: <HomeOutlined />,
-      label: "Dashboard",
-      children: [
-        {
-          key: "overview",
-          icon: <RiseOutlined />,
-          label: <Link to={"/portal/"}>Overview</Link>,
-        },
-        {
-          key: "inventory-history",
-          icon: <HistoryOutlined />,
-          label: (
-            <Link to={"/portal/inventory-history"}>Inventory History</Link>
-          ),
-        },
-      ],
+      label: <Link to={"/portal/"}>Dashboard</Link>,
+      // children: [
+      //   {
+      //     key: "overview",
+      //     icon: <RiseOutlined />,
+      //     label: <Link to={"/portal/"}>Overview</Link>,
+      //   },
+      //   {
+      //     key: "inventory-history",
+      //     icon: <HistoryOutlined />,
+      //     label: (
+      //       <Link to={"/portal/inventory-history"}>Inventory History</Link>
+      //     ),
+      //   },
+      // ],
     },
     {
       key: "report",
       icon: <TableOutlined />,
-      label: "Report",
-      children: [
-        {
-          key: "mris",
-          icon: <UnorderedListOutlined />,
-          label: <Link to="/portal/mris">MRIS</Link>,
-        },
-      ],
+      label: <Link to="/portal/mris">MRIS</Link>,
+      // children: [
+      //   {
+      //     key: "mris",
+      //     icon: <UnorderedListOutlined />,
+      //     label: <Link to="/portal/mris">MRIS</Link>,
+      //   },
+      // ],
     },
     {
       key: "inventory",
       icon: <FileDoneOutlined />,
-      label: "Inventory",
-      children: [
-        {
-          key: "item",
-          icon: <ContainerOutlined />,
-          label: <Link to="/portal/item">Item</Link>,
-        },
-        {
-          key: "item-master",
-          icon: <HddOutlined />,
-          label: <Link to="/portal/item-master">Item Master</Link>,
-        },
-      ],
+      label: <Link to="/portal/item">Item</Link>,
+      // children: [
+      //   {
+      //     key: "item",
+      //     icon: <ContainerOutlined />,
+      //     label: <Link to="/portal/item">Item</Link>,
+      //   },
+      //   {
+      //     key: "item-master",
+      //     icon: <HddOutlined />,
+      //     label: <Link to="/portal/item-master">Item Master</Link>,
+      //   },
+      // ],
     },
     {
       key: "logout",
