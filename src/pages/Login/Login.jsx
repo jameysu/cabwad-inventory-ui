@@ -58,6 +58,7 @@ const Login = () => {
           name="basic"
           onFinish={onLogin}
           initialValues={{ remember: true }}
+          disabled={isLoading || loginSuccess}
         >
           <Flex vertical justify="center" align="center">
             <Image width={150} src={cabwadLogo} preview={false} />

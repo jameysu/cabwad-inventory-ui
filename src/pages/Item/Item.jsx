@@ -34,6 +34,7 @@ const Item = () => {
     isError: fetchItemFailed,
     refetch,
   } = useGetItemsQuery();
+  console.log("fetchItemSuccess", fetchItemSuccess);
 
   const [
     deleteItem,

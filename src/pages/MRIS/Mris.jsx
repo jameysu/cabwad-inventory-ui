@@ -20,6 +20,7 @@ import isSameOrAfter from "dayjs/plugin/isSameOrAfter";
 import isSameOrBefore from "dayjs/plugin/isSameOrBefore";
 import MrisStyles from "./Mris.styles";
 import { Html5Qrcode } from "html5-qrcode";
+import { useGetStocksQuery } from "../../services/stockApi";
 
 dayjs.extend(isSameOrAfter);
 dayjs.extend(isSameOrBefore);
@@ -34,6 +35,13 @@ const STATUS_OPTIONS = [
 ];
 
 const Mris = () => {
+  const {
+    data: fetchStocksSuccess,
+    isLoading: fetchStocksLoading,
+    isError: fetchStocksFailed,
+    refetch,
+  } = useGetStocksQuery();
+  console.log("data", fetchStocksSuccess);
   const [filter, setFilter] = useState("all");
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [downloadFilter, setDownloadFilter] = useState([]);
@@ -81,78 +89,21 @@ const Mris = () => {
     return () => clearTimeout(timeout);
   }, [isQRModalOpen]);
 
-  const data = [
-    {
-      key: 1,
-      type: "stock-in",
-      item: "Laptop",
-      size: "15 inch",
-      quantity: 10,
-      amount: 65000,
-      date: "2025-10-01T10:30:00",
-    },
-    {
-      key: 2,
-      type: "stock-out",
-      item: "Mouse",
-      size: "Medium",
-      quantity: 5,
-      amount: 1500,
-      date: "2025-10-02T15:45:00",
-    },
-    {
-      key: 3,
-      type: "return",
-      item: "Keyboard",
-      size: "Full-size",
-      quantity: 2,
-      amount: 2000,
-      date: "2025-10-03T09:20:00",
-    },
-    {
-      key: 4,
-      type: "stock-in",
-      item: "Monitor",
-      size: "24 inch",
-      quantity: 8,
-      amount: 32000,
-      date: "2025-10-04T14:10:00",
-    },
-    {
-      key: 5,
-      type: "stock-out",
-      item: "Laptop",
-      size: "15 inch",
-      quantity: 3,
-      amount: 19500,
-      date: "2025-10-05T11:55:00",
-    },
-    {
-      key: 6,
-      type: "return",
-      item: "Mouse",
-      size: "Small",
-      quantity: 1,
-      amount: 300,
-      date: "2025-10-06T08:40:00",
-    },
-  ];
-
   // ✅ Updated columns to format date/time
   const columns = [
-    { title: "Item Name", dataIndex: "item", key: "item" },
+    { title: "Item Name", dataIndex: "description", key: "description" },
     { title: "Size", dataIndex: "size", key: "size" },
     { title: "Quantity", dataIndex: "quantity", key: "quantity" },
     {
       title: "Amount",
       dataIndex: "amount",
       key: "amount",
-      render: (value) => `₱${value.toLocaleString()}`,
+      render: (value) => `₱${value?.toLocaleString()}`,
     },
     {
       title: "Date",
-      dataIndex: "date",
-      key: "date",
+      dataIndex: "createdAt",
+      key: "createdAt",
       render: (value) => {
         const date = dayjs(value);
         return (
@@ -167,30 +118,38 @@ const Mris = () => {
     },
     {
       title: "Type",
-      dataIndex: "type",
-      key: "type",
-      render: (text) => (
-        <span
-          style={{
-            fontWeight: 600,
-            color:
-              text === "stock-in"
-                ? "green"
-                : text === "stock-out"
-                ? "red"
-                : "blue",
-          }}
-        >
-          {text.toUpperCase()}
-        </span>
-      ),
+      dataIndex: "transaction_type",
+      key: "transaction_type",
+      render: (type) => {
+        const typeMap = {
+          1: { label: "STOCK-IN", color: "green" },
+          2: { label: "STOCK-OUT", color: "red" },
+          3: { label: "RETURN", color: "blue" },
+        };
+
+        const { label, color } = typeMap[type] || {
+          label: "UNKNOWN",
+          color: "gray",
+        };
+
+        return <span style={{ fontWeight: 600, color }}>{label}</span>;
+      },
     },
   ];
 
   const filteredData = useMemo(() => {
-    if (filter === "all") return data;
-    return data.filter((d) => d.type === filter);
-  }, [filter, data]);
+    if (filter === "all") return fetchStocksSuccess?.stocks;
+
+    const filterMap = {
+      "stock-in": 1,
+      "stock-out": 2,
+      return: 3,
+    };
+
+    return fetchStocksSuccess?.stocks.filter(
+      (d) => d.transaction_type === filterMap[filter]
+    );
+  }, [fetchStocksSuccess?.stocks, filter]);
 
   const handleOpenModal = () => setIsModalOpen(true);
   const handleCloseModal = () => setIsModalOpen(false);
@@ -202,10 +161,22 @@ const Mris = () => {
         return;
       }
 
-      let exportData = [...data];
+      const transactionTypeMap = {
+        1: "stock-in",
+        2: "stock-out",
+        3: "return",
+      };
+
+      let exportData = fetchStocksSuccess?.stocks.map((item) => ({
+        ...item,
+        transaction_type:
+          transactionTypeMap[item.transaction_type] || "Unknown",
+      }));
 
       if (downloadFilter.length > 0) {
-        exportData = exportData.filter((d) => downloadFilter.includes(d.type));
+        exportData = exportData.filter((d) =>
+          downloadFilter.includes(d.transaction_type)
+        );
       }
 
       if (startDate) {
@@ -238,12 +209,12 @@ const Mris = () => {
 
       exportData.forEach((row) => {
         worksheet.addRow({
-          item: row.item,
+          item: row.description,
           size: row.size,
           quantity: row.quantity,
-          amount: row.amount,
-          date: dayjs(row.date).format("MMMM D, YYYY hh:mm A"),
-          type: row.type.toUpperCase(),
+          amount: row.total_price,
+          date: dayjs(row.createdAt).format("MMMM D, YYYY hh:mm A"),
+          type: row.transaction_type.toUpperCase(),
         });
       });
 
@@ -334,14 +305,29 @@ const Mris = () => {
       ) : (
         <Space direction="vertical" style={{ width: "100%" }}>
           <div className="mobile-cards">
-            {filteredData.map((item) => {
-              const date = dayjs(item.date);
+            {filteredData?.map((item) => {
+              const date = dayjs(item.createdAt);
               return (
-                <div key={item.key} className="mobile-card">
+                <div key={item.id} className="mobile-card">
                   <div className="card-header">
-                    <span className="item-name">{item.item}</span>
-                    <span className={`badge ${item.type}`}>{item.type}</span>
+                    <span className="item-name">{item.description}</span>
+                    <span
+                      className={`badge ${
+                        item.transaction_type === 1
+                          ? "stock-in"
+                          : item.transaction_type === 2
+                          ? "stock-out"
+                          : "return"
+                      }`}
+                    >
+                      {item.transaction_type === 1
+                        ? "STOCK-IN"
+                        : item.transaction_type === 2
+                        ? "STOCK-OUT"
+                        : "RETURN"}
+                    </span>
                   </div>
+
                   <div className="card-row">
                     <strong>Size:</strong> <span>{item.size}</span>
                   </div>
@@ -350,7 +336,7 @@ const Mris = () => {
                   </div>
                   <div className="card-row">
                     <strong>Amount:</strong>{" "}
-                    <span>₱{item.amount.toLocaleString()}</span>
+                    <span>₱{item.total_price?.toLocaleString()}</span>
                   </div>
                   <div className="card-row">
                     <strong>Date:</strong>{" "}
