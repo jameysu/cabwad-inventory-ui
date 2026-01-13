@@ -20,8 +20,11 @@ import dayjs from "dayjs";
 import isSameOrAfter from "dayjs/plugin/isSameOrAfter";
 import isSameOrBefore from "dayjs/plugin/isSameOrBefore";
 import MrisStyles from "./Mris.styles";
-import { Html5Qrcode } from "html5-qrcode";
-import { useGetStocksQuery } from "../../services/stockApi";
+import { Html5Qrcode, Html5QrcodeScannerState } from "html5-qrcode";
+import {
+  useAddStocksMutation,
+  useGetStocksQuery,
+} from "../../services/stockApi";
 
 dayjs.extend(isSameOrAfter);
 dayjs.extend(isSameOrBefore);
@@ -36,11 +39,14 @@ const STATUS_OPTIONS = [
 ];
 
 const Mris = () => {
+  const [messageApi, contextHolder] = message.useMessage();
   const {
     data: fetchStocksSuccess,
     isLoading: fetchStocksLoading,
     isError: fetchStocksFailed,
+    refetch,
   } = useGetStocksQuery();
+  const [addStocks, { isLoading: isSubmitting }] = useAddStocksMutation();
 
   const [filter, setFilter] = useState("all");
   const [isModalOpen, setIsModalOpen] = useState(false);
@@ -53,41 +59,61 @@ const Mris = () => {
   const [isQRModalOpen, setIsQRModalOpen] = useState(false);
   const [qrScanner, setQrScanner] = useState(null);
 
+  const [qrStocks, setQrStocks] = useState([]);
+  const [isPreviewModalOpen, setIsPreviewModalOpen] = useState(false);
+
   useEffect(() => {
     if (!isQRModalOpen) return;
 
-    const timeout = setTimeout(() => {
+    let scanner;
+
+    const timeout = setTimeout(async () => {
       const qrElement = document.getElementById("qr-reader");
       if (!qrElement) {
-        message.error("QR reader element not found");
+        messageApi.error("QR reader element not found");
         return;
       }
 
-      const scanner = new Html5Qrcode("qr-reader");
+      scanner = new Html5Qrcode("qr-reader");
       setQrScanner(scanner);
 
-      scanner
-        .start(
-          { facingMode: "environment" }, // back camera
+      try {
+        await scanner.start(
+          { facingMode: "environment" },
           { fps: 10, qrbox: 250 },
           (decodedText) => {
-            message.success(`QR Scanned: ${decodedText}`);
-            scanner.stop().catch(() => {});
+            // messageApi.success(`QR Scanned: ${decodedText}`);
+            handleQrResult(decodedText);
+            safeStopScanner(scanner);
             setIsQRModalOpen(false);
-
-            // handle scanned value here
-          },
-          (error) => {
-            // ignore scan errors
           }
-        )
-        .catch(() => {
-          message.error("Camera access denied or unavailable");
-        });
+        );
+      } catch {
+        messageApi.error("Camera access denied or unavailable");
+      }
     }, 300);
 
-    return () => clearTimeout(timeout);
-  }, [isQRModalOpen]);
+    return () => {
+      clearTimeout(timeout);
+      safeStopScanner(scanner);
+    };
+  }, [isQRModalOpen, messageApi]);
+
+  const safeStopScanner = async (scanner) => {
+    if (!scanner) return;
+
+    try {
+      const state = scanner.getState();
+      if (
+        state === Html5QrcodeScannerState.SCANNING ||
+        state === Html5QrcodeScannerState.PAUSED
+      ) {
+        await scanner.stop();
+      }
+    } catch {
+      // swallow safely
+    }
+  };
 
   const columns = [
     { title: "Item Name", dataIndex: "description", key: "description" },
@@ -136,6 +162,41 @@ const Mris = () => {
     },
   ];
 
+  const qrColumns = [
+    {
+      title: "Item Name",
+      dataIndex: "name",
+    },
+    {
+      title: "Price",
+      dataIndex: "price",
+      render: (v) => `₱${v.toLocaleString()}`,
+    },
+    {
+      title: "Quantity",
+      dataIndex: "quantity",
+    },
+    {
+      title: "Type",
+      dataIndex: "transaction_type",
+      render: (type) => ({ 1: "STOCK-IN", 2: "STOCK-OUT", 3: "RETURN" }[type]),
+    },
+    {
+      title: "Action",
+      render: (_, __, index) => (
+        <Button
+          danger
+          size="small"
+          onClick={() =>
+            setQrStocks((prev) => prev.filter((_, i) => i !== index))
+          }
+        >
+          Delete
+        </Button>
+      ),
+    },
+  ];
+
   const filteredData = useMemo(() => {
     if (filter === "all") return fetchStocksSuccess?.stocks;
 
@@ -156,7 +217,7 @@ const Mris = () => {
   const handleDownload = async () => {
     try {
       if (startDate && endDate && dayjs(startDate).isAfter(dayjs(endDate))) {
-        message.error("Start date cannot be after End date.");
+        messageApi.error("Start date cannot be after End date.");
         return;
       }
 
@@ -190,7 +251,7 @@ const Mris = () => {
       }
 
       if (exportData.length === 0) {
-        message.warning("No data found for the selected filters.");
+        messageApi.warning("No data found for the selected filters.");
         return;
       }
 
@@ -241,11 +302,46 @@ const Mris = () => {
       });
 
       saveAs(blob, filename);
-      message.success("Excel file downloaded successfully!");
+      messageApi.success("Excel file downloaded successfully!");
       handleCloseModal();
     } catch (error) {
       console.error("Excel export error:", error);
-      message.error("Failed to generate Excel file.");
+      messageApi.error("Failed to generate Excel file.");
+    }
+  };
+
+  const handleQrResult = (decodedText) => {
+    try {
+      const parsed = JSON.parse(decodedText);
+
+      if (!Array.isArray(parsed.stocks)) {
+        throw new Error("Invalid QR format");
+      }
+
+      setQrStocks(parsed.stocks);
+      setIsPreviewModalOpen(true);
+      message.success("QR data loaded successfully");
+    } catch (err) {
+      message.error("Invalid QR code data");
+    }
+  };
+
+  const handleSubmitQrStocks = async () => {
+    if (qrStocks.length === 0) {
+      message.warning("No items to submit");
+      return;
+    }
+
+    try {
+      await addStocks({ stocks: qrStocks }).unwrap();
+      message.success("Stocks successfully submitted");
+
+      setQrStocks([]);
+      setIsPreviewModalOpen(false);
+      refetch();
+    } catch (err) {
+      console.error(err);
+      message.error("Failed to submit stocks");
     }
   };
 
@@ -260,6 +356,7 @@ const Mris = () => {
 
   return (
     <MrisStyles>
+      {contextHolder}
       <Row justify="space-between" align="middle" style={{ marginBottom: 16 }}>
         <Col>
           <Title level={3}>Item Records</Title>
@@ -307,6 +404,7 @@ const Mris = () => {
         <Table
           columns={columns}
           dataSource={filteredData}
+          rowKey={(record) => record.id}
           pagination={{ pageSize: 10 }}
           bordered
         />
@@ -412,8 +510,8 @@ const Mris = () => {
       <Modal
         title="Scan QR Code"
         open={isQRModalOpen}
-        onCancel={() => {
-          qrScanner?.stop().catch(() => {});
+        onCancel={async () => {
+          await safeStopScanner(qrScanner);
           setIsQRModalOpen(false);
         }}
         footer={null}
@@ -440,41 +538,40 @@ const Mris = () => {
               if (!file || !qrScanner) return;
 
               try {
-                // Stop camera before scanning file
-                await qrScanner.stop().catch(() => {});
+                await safeStopScanner(qrScanner);
 
-                // Scan uploaded image
                 const decodedText = await qrScanner.scanFile(file, true);
-                message.success(`QR Scanned: ${decodedText}`);
-
+                // messageApi.success(`QR Scanned: ${decodedText}`);
+                handleQrResult(decodedText);
                 setIsQRModalOpen(false);
-
-                // 👉 handle scanned value here (create request, fetch item, etc.)
               } catch (err) {
                 console.error(err);
-                message.error("Failed to scan QR from image.");
-              } finally {
-                // Restart camera if modal still open
-                if (isQRModalOpen) {
-                  qrScanner
-                    .start(
-                      { facingMode: "environment" },
-                      { fps: 10, qrbox: 250 },
-                      (decodedText) => {
-                        message.success(`QR Scanned: ${decodedText}`);
-                        qrScanner.stop().catch(() => {});
-                        setIsQRModalOpen(false);
-
-                        // handle scanned value here
-                      }
-                    )
-                    .catch(() => {});
-                }
+                messageApi.error("Failed to scan QR from image.");
               }
             }}
           />
 
           <div style={{ fontSize: 12, opacity: 0.7 }}>Or upload QR image</div>
+        </div>
+      </Modal>
+      <Modal
+        title="Scanned Stock Preview"
+        open={isPreviewModalOpen}
+        onCancel={() => setIsPreviewModalOpen(false)}
+        onOk={handleSubmitQrStocks}
+        okText="Submit"
+        confirmLoading={isSubmitting}
+        width={700}
+        centered
+      >
+        <div style={{ overflowX: "auto" }}>
+          <Table
+            columns={qrColumns}
+            dataSource={qrStocks}
+            rowKey={(row, index) => `${row.item_id}-${index}`}
+            pagination={false}
+            scroll={{ x: "max-content" }} // allow horizontal scroll if needed
+          />
         </div>
       </Modal>
     </MrisStyles>
