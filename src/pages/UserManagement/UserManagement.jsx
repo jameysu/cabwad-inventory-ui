@@ -45,7 +45,6 @@ const UserManagement = () => {
   };
 
   const handleDelete = (record) => {
-    // Placeholder for delete API call
     console.log("Delete user:", record);
     message.success(`User "${record.username}" deleted successfully`);
   };
@@ -102,15 +101,11 @@ const UserManagement = () => {
 
   if (getUsersLoading)
     return (
-      <Flex justify="center" align="center" style={{ minHeight: "60vh" }}>
-        <Spin size="large" />
-      </Flex>
+      <Spin tip="Loading...">
+        <div style={{ height: "80vh" }} />
+      </Spin>
     );
-
-  if (getUsersFailed) {
-    message.error("Failed to fetch users");
-    return <p style={{ textAlign: "center" }}>Failed to load users.</p>;
-  }
+  if (getUsersFailed) return <Text type="danger">Failed to load users.</Text>;
 
   return (
     <UserManagementStyled>

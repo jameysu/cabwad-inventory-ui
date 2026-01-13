@@ -12,6 +12,7 @@ import {
   Row,
   Col,
   Checkbox,
+  Spin,
 } from "antd";
 import ExcelJS from "exceljs";
 import { saveAs } from "file-saver";
@@ -39,9 +40,8 @@ const Mris = () => {
     data: fetchStocksSuccess,
     isLoading: fetchStocksLoading,
     isError: fetchStocksFailed,
-    refetch,
   } = useGetStocksQuery();
-  console.log("data", fetchStocksSuccess);
+
   const [filter, setFilter] = useState("all");
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [downloadFilter, setDownloadFilter] = useState([]);
@@ -89,15 +89,14 @@ const Mris = () => {
     return () => clearTimeout(timeout);
   }, [isQRModalOpen]);
 
-  // ✅ Updated columns to format date/time
   const columns = [
     { title: "Item Name", dataIndex: "description", key: "description" },
     { title: "Size", dataIndex: "size", key: "size" },
     { title: "Quantity", dataIndex: "quantity", key: "quantity" },
     {
       title: "Amount",
-      dataIndex: "amount",
-      key: "amount",
+      dataIndex: "total_price",
+      key: "total_price",
       render: (value) => `₱${value?.toLocaleString()}`,
     },
     {
@@ -249,6 +248,15 @@ const Mris = () => {
       message.error("Failed to generate Excel file.");
     }
   };
+
+  if (fetchStocksLoading)
+    return (
+      <Spin tip="Loading...">
+        <div style={{ height: "80vh" }} />
+      </Spin>
+    );
+  if (fetchStocksFailed)
+    return <Text type="danger">Failed to load stocks.</Text>;
 
   return (
     <MrisStyles>

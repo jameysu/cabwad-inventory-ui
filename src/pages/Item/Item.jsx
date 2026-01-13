@@ -142,9 +142,10 @@ const Item = () => {
   };
 
   const handleSubmitGenerateQR = async () => {
-    const stocks = qrItems.map((stock) => ({
-      ...stock,
-      transactionType,
+    const stocks = qrItems.map(({ id, ...rest }) => ({
+      ...rest,
+      item_id: id,
+      transaction_type: transactionType,
     }));
 
     const payload = { stocks };
