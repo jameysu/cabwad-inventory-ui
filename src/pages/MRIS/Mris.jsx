@@ -25,6 +25,7 @@ import {
   useAddStocksMutation,
   useGetStocksQuery,
 } from "../../services/stockApi";
+import { formatAmount } from "../../utils/formatAmount";
 
 dayjs.extend(isSameOrAfter);
 dayjs.extend(isSameOrBefore);
@@ -120,10 +121,10 @@ const Mris = () => {
     { title: "Size", dataIndex: "size", key: "size" },
     { title: "Quantity", dataIndex: "quantity", key: "quantity" },
     {
-      title: "Amount",
+      title: "Total Amount",
       dataIndex: "total_price",
       key: "total_price",
-      render: (value) => `₱${value?.toLocaleString()}`,
+      render: (value) => `₱${formatAmount(value)}`,
     },
     {
       title: "Date",
@@ -142,7 +143,7 @@ const Mris = () => {
       },
     },
     {
-      title: "Type",
+      title: "Request Type",
       dataIndex: "transaction_type",
       key: "transaction_type",
       render: (type) => {
@@ -191,7 +192,7 @@ const Mris = () => {
             setQrStocks((prev) => prev.filter((_, i) => i !== index))
           }
         >
-          Delete
+          Remove
         </Button>
       ),
     },
@@ -262,7 +263,7 @@ const Mris = () => {
         { header: "Item Name", key: "item", width: 25 },
         { header: "Size", key: "size", width: 20 },
         { header: "Quantity", key: "quantity", width: 12 },
-        { header: "Amount (₱)", key: "amount", width: 15 },
+        { header: "Total Amount(₱)", key: "amount", width: 15 },
         { header: "Date", key: "date", width: 20 },
         { header: "Type", key: "type", width: 15 },
       ];
@@ -441,8 +442,8 @@ const Mris = () => {
                     <strong>Quantity:</strong> <span>{item.quantity}</span>
                   </div>
                   <div className="card-row">
-                    <strong>Amount:</strong>{" "}
-                    <span>₱{item.total_price?.toLocaleString()}</span>
+                    <strong>Total Amount:</strong>{" "}
+                    <span>₱{formatAmount(item.total_price)}</span>
                   </div>
                   <div className="card-row">
                     <strong>Date:</strong>{" "}
@@ -570,7 +571,7 @@ const Mris = () => {
             dataSource={qrStocks}
             rowKey={(row, index) => `${row.item_id}-${index}`}
             pagination={false}
-            scroll={{ x: "max-content" }} // allow horizontal scroll if needed
+            scroll={{ x: "max-content" }}
           />
         </div>
       </Modal>

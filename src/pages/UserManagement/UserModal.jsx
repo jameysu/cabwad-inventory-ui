@@ -60,12 +60,14 @@ const UserModal = ({ open, onCancel, selectedUser, refetch }) => {
       onOk={handleSubmit}
       confirmLoading={adding || updating}
       okText={isEdit ? "Update" : "Add"}
+      centered
     >
       <Form form={form} layout="vertical">
         <Form.Item
           name="username"
           label="Username"
           rules={[{ required: true, message: "Please enter username" }]}
+          style={{ marginBottom: 5 }}
         >
           <Input placeholder="Enter username" />
         </Form.Item>
@@ -77,6 +79,7 @@ const UserModal = ({ open, onCancel, selectedUser, refetch }) => {
             { required: true, message: "Please enter email" },
             { type: "email", message: "Enter a valid email" },
           ]}
+          style={{ marginBottom: 5 }}
         >
           <Input placeholder="Enter email" />
         </Form.Item>
@@ -85,6 +88,7 @@ const UserModal = ({ open, onCancel, selectedUser, refetch }) => {
           name="password"
           label="Password"
           rules={[{ required: true, message: "Please enter password" }]}
+          style={{ marginBottom: 5 }}
         >
           <Input.Password placeholder="Enter password" />
         </Form.Item>
@@ -93,6 +97,7 @@ const UserModal = ({ open, onCancel, selectedUser, refetch }) => {
           name="usertype"
           label="User Type"
           rules={[{ required: true, message: "Please select user type" }]}
+          style={{ marginBottom: 5 }}
         >
           <Select placeholder="Select user type">
             <Option value="1">ADMIN</Option>

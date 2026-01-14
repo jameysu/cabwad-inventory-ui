@@ -93,12 +93,14 @@ const ItemModal = ({ open, onClose, selectedItem, refetch }) => {
       confirmLoading={createItemLoading || updateItemLoading}
       onCancel={onClose}
       onOk={handleOk}
+      className="item-modal"
     >
       <Form layout="vertical" form={form}>
         <Form.Item
           name="item"
           label="Item Name"
           rules={[{ required: true, message: "Please enter item name" }]}
+          style={{ marginBottom: 0 }}
         >
           <Input />
         </Form.Item>
@@ -107,6 +109,7 @@ const ItemModal = ({ open, onClose, selectedItem, refetch }) => {
           name="brand"
           label="Brand"
           rules={[{ required: true, message: "Please enter brand" }]}
+          style={{ marginBottom: 0 }}
         >
           <Input />
         </Form.Item>
@@ -115,6 +118,7 @@ const ItemModal = ({ open, onClose, selectedItem, refetch }) => {
           name="category"
           label="Category"
           rules={[{ required: true, message: "Please enter category" }]}
+          style={{ marginBottom: 0 }}
         >
           <Input />
         </Form.Item>
@@ -123,6 +127,7 @@ const ItemModal = ({ open, onClose, selectedItem, refetch }) => {
           name="size"
           label="Size"
           rules={[{ required: true, message: "Please enter item size" }]}
+          style={{ marginBottom: 0 }}
         >
           <Input />
         </Form.Item>
@@ -131,6 +136,7 @@ const ItemModal = ({ open, onClose, selectedItem, refetch }) => {
           name="price"
           label="Price"
           rules={[{ required: true, message: "Please enter item price" }]}
+          style={{ marginBottom: 0 }}
         >
           <Input addonBefore="₱" />
         </Form.Item>
@@ -140,6 +146,7 @@ const ItemModal = ({ open, onClose, selectedItem, refetch }) => {
             name="quantity"
             label="Quantity"
             rules={[{ required: true, message: "Please enter item quantity" }]}
+            style={{ marginBottom: 0 }}
           >
             <Input />
           </Form.Item>
@@ -149,6 +156,7 @@ const ItemModal = ({ open, onClose, selectedItem, refetch }) => {
           name="stock_in"
           label="Stock In"
           rules={[{ required: true, message: "Please enter stock in" }]}
+          style={{ marginBottom: 0 }}
         >
           <InputNumber min={0} style={{ width: "100%" }} />
         </Form.Item>
@@ -157,6 +165,7 @@ const ItemModal = ({ open, onClose, selectedItem, refetch }) => {
           name="stock_out"
           label="Stock Out"
           rules={[{ required: true, message: "Please enter stock out" }]}
+          style={{ marginBottom: 0 }}
         >
           <InputNumber min={0} style={{ width: "100%" }} />
         </Form.Item>

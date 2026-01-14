@@ -109,12 +109,13 @@ const UserManagement = () => {
 
   return (
     <UserManagementStyled>
-      <Flex className="header-actions">
+      <Flex className="header-actions" gap={10}>
         <Search
           placeholder="Search users"
           onSearch={handleSearch}
           onChange={(e) => handleSearch(e.target.value)}
           allowClear
+          style={{ width: "250px" }}
         />
         <Button type="primary" onClick={handleAddUser}>
           Add User

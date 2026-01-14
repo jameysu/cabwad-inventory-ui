@@ -7,9 +7,6 @@ const UserManagementStyled = styled.div`
   overflow-y: auto;
 
   .header-actions {
-    display: flex;
-    gap: 16px;
-    align-items: center;
     margin-bottom: 20px;
     flex-wrap: wrap;
   }

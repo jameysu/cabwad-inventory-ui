@@ -23,6 +23,7 @@ import {
   useGetItemsQuery,
 } from "../../services/itemApi";
 import { DeleteOutlined } from "@ant-design/icons";
+import { formatAmount } from "../../utils/formatAmount";
 
 const { Search } = Input;
 const { Text, Title } = Typography;
@@ -218,20 +219,26 @@ const Item = () => {
     { title: "Brand", dataIndex: "brand", key: "brand" },
     { title: "Category", dataIndex: "category", key: "category" },
     { title: "Size", dataIndex: "size", key: "size" },
-    { title: "Price (₱)", dataIndex: "price", key: "price" },
+    {
+      title: "Price (₱)",
+      dataIndex: "price",
+      key: "price",
+      render: (value) => `₱${formatAmount(value)}`,
+    },
     { title: "Stock In", dataIndex: "stock_in", key: "stock_in" },
     { title: "Stock Out", dataIndex: "stock_out", key: "stock_out" },
+    { title: "Quantity", dataIndex: "quantity", key: "quantity" },
     {
       key: "actions",
       align: "center",
       render: (_, record) => {
         const menuItems = [
           { key: "update", label: "Update", onClick: () => handleEdit(record) },
-          {
-            key: "export",
-            label: "Export QR",
-            onClick: () => handleExportSinglePDF(record),
-          },
+          // {
+          //   key: "export",
+          //   label: "Export QR",
+          //   onClick: () => handleExportSinglePDF(record),
+          // },
           {
             key: "delete",
             label: "Delete",
@@ -335,8 +342,7 @@ const Item = () => {
               <div className="info-row">
                 <strong>Size:</strong> <span>{record.size}</span>
               </div>
-              <div className="price">₱{record.price}</div>
-
+              <div className="price">₱{formatAmount(record.price)}</div>
               <div className="stock-info">
                 <span className="in">In: {record.stock_in}</span>
                 <span className="out">Out: {record.stock_out}</span>
@@ -461,7 +467,9 @@ const Item = () => {
                     />,
                   ]}
                 >
-                  {item.name} — {item.quantity} pcs
+                  <Text ellipsis style={{ width: "70%" }}>
+                    {item.quantity} pcs - {item.name}
+                  </Text>
                 </List.Item>
               )}
             />
