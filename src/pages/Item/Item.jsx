@@ -24,6 +24,8 @@ import {
 } from "../../services/itemApi";
 import { DeleteOutlined } from "@ant-design/icons";
 import { formatAmount } from "../../utils/formatAmount";
+import { useAddStocksMutation } from "../../services/stockApi";
+import { Html5Qrcode, Html5QrcodeScannerState } from "html5-qrcode";
 
 const { Search } = Input;
 const { Text, Title } = Typography;
@@ -46,8 +48,10 @@ const Item = () => {
     },
   ] = useDeleteItemMutation();
 
+  const [messageApi, contextHolder] = message.useMessage();
+  const [addStocks, { isLoading: isSubmitting }] = useAddStocksMutation();
+
   const [generateQRForm] = Form.useForm();
-  const transactionType = Form.useWatch("transaction_type", generateQRForm);
 
   const [openModal, setOpenModal] = useState(false);
   const [selectedItem, setSelectedItem] = useState(null);
@@ -56,7 +60,12 @@ const Item = () => {
   const [openQRModal, setOpenQRModal] = useState(false);
   const [qrItems, setQrItems] = useState([]);
   const [generatedQR, setGeneratedQR] = useState(null);
-  const [qrPayload, setQrPayload] = useState(null);
+
+  const [qrStocks, setQrStocks] = useState([]);
+  const [isPreviewModalOpen, setIsPreviewModalOpen] = useState(false);
+
+  const [isQRModalOpen, setIsQRModalOpen] = useState(false);
+  const [qrScanner, setQrScanner] = useState(null);
 
   const items = useMemo(() => {
     if (!fetchItemSuccess?.items) return [];
@@ -95,12 +104,54 @@ const Item = () => {
   useEffect(() => {
     if (deleteItemSuccess && !deleteItemLoading) {
       refetch();
-      message.success("Item deleted successfully");
+      messageApi.success("Item deleted successfully");
     }
     if (deleteItemFailed && !deleteItemLoading) {
-      message.error("Failed to delete item");
+      messageApi.error("Failed to delete item");
     }
-  }, [deleteItemFailed, deleteItemLoading, deleteItemSuccess, refetch]);
+  }, [
+    deleteItemFailed,
+    deleteItemLoading,
+    deleteItemSuccess,
+    messageApi,
+    refetch,
+  ]);
+
+  useEffect(() => {
+    if (!isQRModalOpen) return;
+
+    let scanner;
+
+    const timeout = setTimeout(async () => {
+      const qrElement = document.getElementById("qr-reader");
+      if (!qrElement) {
+        messageApi.error("QR reader element not found");
+        return;
+      }
+
+      scanner = new Html5Qrcode("qr-reader");
+      setQrScanner(scanner);
+
+      try {
+        await scanner.start(
+          { facingMode: "environment" },
+          { fps: 10, qrbox: 250 },
+          (decodedText) => {
+            handleQrResult(decodedText);
+            safeStopScanner(scanner);
+            setIsQRModalOpen(false);
+          }
+        );
+      } catch {
+        messageApi.error("Camera access denied or unavailable");
+      }
+    }, 300);
+
+    return () => {
+      clearTimeout(timeout);
+      safeStopScanner(scanner);
+    };
+  }, [isQRModalOpen, messageApi]);
 
   const handleAdd = () => {
     setSelectedItem(null);
@@ -130,7 +181,7 @@ const Item = () => {
       doc.save(`${(record.item || "Item").replace(/\s+/g, "_")}_QR.pdf`);
     } catch (error) {
       console.error("PDF generation failed:", error);
-      message.error("Failed to generate PDF. Please try again.");
+      messageApi.error("Failed to generate PDF. Please try again.");
     }
   };
 
@@ -142,11 +193,29 @@ const Item = () => {
     setOpenQRModal(true);
   };
 
+  const handleQrResult = (decodedText) => {
+    try {
+      const parsed = JSON.parse(decodedText);
+      console.log("decodedText", decodedText);
+
+      if (!Array.isArray(parsed.stocks)) {
+        throw new Error("Invalid QR format");
+      }
+
+      setQrStocks(parsed.stocks);
+      setIsPreviewModalOpen(true);
+      message.success("QR data loaded successfully");
+    } catch (err) {
+      message.error("Invalid QR code data");
+      console.log(err);
+    }
+  };
+
   const handleSubmitGenerateQR = async () => {
     const stocks = qrItems.map(({ id, ...rest }) => ({
       ...rest,
       item_id: id,
-      transaction_type: transactionType,
+      // transaction_type: transactionType,
     }));
 
     const payload = { stocks };
@@ -155,29 +224,29 @@ const Item = () => {
       const qrString = JSON.stringify(payload);
       const qrImage = await QRCode.toDataURL(qrString);
 
-      setQrPayload(payload);
       setGeneratedQR(qrImage);
 
       setQrItems([]);
       generateQRForm.resetFields();
       setOpenQRModal(false);
     } catch (err) {
-      message.error("Failed to generate QR");
+      messageApi.error("Failed to generate QR");
+      console.log(err);
     }
   };
 
   const handleAddQRItem = () => {
     const values = generateQRForm.getFieldsValue();
 
-    if (!values.item || !values.quantity) {
-      message.warning("Please complete all fields before adding");
+    if (!values.item || !values.quantity || !values.transaction_type) {
+      messageApi.warning("Please complete all fields before adding");
       return;
     }
 
     const selectedItem = items.find((i) => i.key === values.item);
 
     if (!selectedItem) {
-      message.error("Selected item not found");
+      messageApi.error("Selected item not found");
       return;
     }
 
@@ -203,6 +272,7 @@ const Item = () => {
           name: `${selectedItem.brand} ${selectedItem.item}`,
           price: Number(selectedItem.price),
           quantity: Number(values.quantity),
+          transaction_type: values.transaction_type,
         },
       ];
     });
@@ -212,6 +282,41 @@ const Item = () => {
 
   const handleRemoveQRItem = (index) => {
     setQrItems((prev) => prev.filter((_, i) => i !== index));
+  };
+
+  const safeStopScanner = async (scanner) => {
+    if (!scanner) return;
+
+    try {
+      const state = scanner.getState();
+      if (
+        state === Html5QrcodeScannerState.SCANNING ||
+        state === Html5QrcodeScannerState.PAUSED
+      ) {
+        await scanner.stop();
+      }
+    } catch {
+      // swallow safely
+    }
+  };
+
+  const handleSubmitQrStocks = async () => {
+    if (qrStocks.length === 0) {
+      message.warning("No items to submit");
+      return;
+    }
+
+    try {
+      await addStocks({ stocks: qrStocks }).unwrap();
+      message.success("Stocks successfully submitted");
+
+      setQrStocks([]);
+      setIsPreviewModalOpen(false);
+      refetch();
+    } catch (err) {
+      console.error(err);
+      message.error("Failed to submit stocks");
+    }
   };
 
   const columns = [
@@ -259,6 +364,41 @@ const Item = () => {
     },
   ];
 
+  const qrColumns = [
+    {
+      title: "Item Name",
+      dataIndex: "name",
+    },
+    {
+      title: "Price",
+      dataIndex: "price",
+      render: (v) => `₱${v.toLocaleString()}`,
+    },
+    {
+      title: "Quantity",
+      dataIndex: "quantity",
+    },
+    {
+      title: "Type",
+      dataIndex: "transaction_type",
+      render: (type) => ({ 1: "STOCK-IN", 2: "STOCK-OUT", 3: "RETURN" }[type]),
+    },
+    {
+      title: "Action",
+      render: (_, __, index) => (
+        <Button
+          danger
+          size="small"
+          onClick={() =>
+            setQrStocks((prev) => prev.filter((_, i) => i !== index))
+          }
+        >
+          Remove
+        </Button>
+      ),
+    },
+  ];
+
   if (fetchItemLoading)
     return (
       <Spin tip="Loading items...">
@@ -269,6 +409,7 @@ const Item = () => {
 
   return (
     <ItemStyles>
+      {contextHolder}
       <Flex
         className="search-container"
         gap={10}
@@ -287,6 +428,9 @@ const Item = () => {
         </Button>
         <Button type="primary" onClick={handleGenerateQR}>
           Generate Request
+        </Button>
+        <Button type="primary" onClick={() => setIsQRModalOpen(true)}>
+          Create Request
         </Button>
       </Flex>
 
@@ -400,7 +544,7 @@ const Item = () => {
             key="generate"
             type="primary"
             onClick={() => handleSubmitGenerateQR()}
-            disabled={!qrItems.length || !transactionType}
+            disabled={!qrItems.length}
           >
             Generate
           </Button>,
@@ -448,9 +592,17 @@ const Item = () => {
           >
             <Input type="number" placeholder="Enter quantity" />
           </Form.Item>
+          <Form.Item name="transaction_type" label="Request Type">
+            <Select placeholder={"Choose request"}>
+              <Option value={1}>Stock In</Option>
+              <Option value={2}>Stock Out</Option>
+              <Option value={3}>Return</Option>
+            </Select>
+          </Form.Item>
           <Button type="dashed" block onClick={handleAddQRItem}>
             Add Item
           </Button>
+
           {!!qrItems.length && (
             <List
               style={{ marginTop: 16 }}
@@ -474,14 +626,76 @@ const Item = () => {
               )}
             />
           )}
-          <Form.Item name="transaction_type" label="Request Type">
-            <Select placeholder={"Choose request"}>
-              <Option value={1}>Stock In</Option>
-              <Option value={2}>Stock Out</Option>
-              <Option value={3}>Return</Option>
-            </Select>
+          <Form.Item name="control_no" label="Control Number">
+            <Input name="control_no" placeholder="Enter Control Number" />
           </Form.Item>
         </Form>
+      </Modal>
+      <Modal
+        title="Scan QR Code"
+        open={isQRModalOpen}
+        onCancel={async () => {
+          await safeStopScanner(qrScanner);
+          setIsQRModalOpen(false);
+        }}
+        footer={null}
+        centered
+        destroyOnClose
+        afterClose={() => {
+          setQrScanner(null); // cleanup
+        }}
+      >
+        <div
+          id="qr-reader"
+          style={{
+            width: "100%",
+            minHeight: 300,
+          }}
+        />
+
+        <div style={{ marginTop: 16, textAlign: "center" }}>
+          <input
+            type="file"
+            accept="image/*"
+            onChange={async (e) => {
+              const file = e.target.files?.[0];
+              if (!file || !qrScanner) return;
+
+              try {
+                await safeStopScanner(qrScanner);
+
+                const decodedText = await qrScanner.scanFile(file, true);
+                handleQrResult(decodedText);
+                setIsQRModalOpen(false);
+              } catch (err) {
+                console.error(err);
+                messageApi.error("Failed to scan QR from image.");
+              }
+            }}
+          />
+
+          <div style={{ fontSize: 12, opacity: 0.7 }}>Or upload QR image</div>
+        </div>
+      </Modal>
+      <Modal
+        title="Scanned Stock Preview"
+        open={isPreviewModalOpen}
+        onCancel={() => setIsPreviewModalOpen(false)}
+        onOk={handleSubmitQrStocks}
+        okText="Submit"
+        confirmLoading={isSubmitting}
+        width={700}
+        centered
+      >
+        <div style={{ overflowX: "auto" }}>
+          <Table
+            columns={qrColumns}
+            dataSource={qrStocks}
+            rowKey={(row, index) => `${row.item_id}-${index}`}
+            pagination={false}
+            scroll={{ x: "max-content" }}
+          />
+        </div>
       </Modal>
     </ItemStyles>
   );

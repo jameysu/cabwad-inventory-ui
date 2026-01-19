@@ -83,7 +83,6 @@ const Mris = () => {
           { facingMode: "environment" },
           { fps: 10, qrbox: 250 },
           (decodedText) => {
-            // messageApi.success(`QR Scanned: ${decodedText}`);
             handleQrResult(decodedText);
             safeStopScanner(scanner);
             setIsQRModalOpen(false);
