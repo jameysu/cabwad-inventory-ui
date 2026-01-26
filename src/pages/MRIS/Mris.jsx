@@ -219,10 +219,8 @@ const Mris = () => {
 
   const handleDownload = async () => {
     try {
-      if (!controlNoInput.trim()) {
-        messageApi.error("Please enter a control number");
-        return;
-      }
+      const controlNo =
+        controlNoInput && controlNoInput.trim() ? controlNoInput.trim() : null;
 
       const transactionTypeMap = {
         1: "stock-in",
@@ -231,22 +229,35 @@ const Mris = () => {
       };
 
       let data =
-        fetchStocksSuccess?.stocks
-          ?.filter((s) => s.control_no === controlNoInput.trim())
-          ?.map((s) => ({
-            ...s,
-            type: transactionTypeMap[s.transaction_type],
-          })) || [];
+        (fetchStocksSuccess &&
+          fetchStocksSuccess.stocks &&
+          fetchStocksSuccess.stocks
+            .filter((s) => {
+              // With control number → exact match
+              if (controlNo) {
+                return s.control_no === controlNo;
+              }
+
+              // Without control number → include null or empty
+              return s.control_no === null || s.control_no === "";
+            })
+            .map((s) => ({
+              ...s,
+              type: transactionTypeMap[s.transaction_type],
+            }))) ||
+        [];
 
       if (!data.length) {
         messageApi.error(
-          `No stocks found under control number "${controlNoInput}"`,
+          controlNo
+            ? `No stocks found under control number "${controlNo}"`
+            : "No stocks found without a control number",
         );
         return;
       }
 
       // 🔹 FILTER BY TRANSACTION TYPE
-      if (downloadFilter.length) {
+      if (downloadFilter && downloadFilter.length) {
         data = data.filter((d) => downloadFilter.includes(d.type));
       }
 
@@ -268,12 +279,21 @@ const Mris = () => {
         return;
       }
 
-      // 🔹 SINGLE CONTROL NUMBER → ONE SHEET
+      // 🔹 DATE/TIME FALLBACK
+      const now = dayjs();
+      const dateTimeStamp = now.format("YYYYMMDD_HHmmss");
+
+      const sheetName = controlNo || `${dateTimeStamp}`;
+      const headerText = controlNo
+        ? `CONTROL NUMBER: ${controlNo}`
+        : `CONTROL NUMBER: N/A (${now.format("MMMM D, YYYY hh:mm A")})`;
+
+      // 🔹 EXCEL GENERATION
       const workbook = new ExcelJS.Workbook();
-      const ws = workbook.addWorksheet(controlNoInput);
+      const ws = workbook.addWorksheet(sheetName);
 
       ws.mergeCells("A1:F1");
-      ws.getCell("A1").value = `CONTROL NUMBER: ${controlNoInput}`;
+      ws.getCell("A1").value = headerText;
       ws.getCell("A1").font = { bold: true, size: 14 };
       ws.getCell("A1").alignment = { horizontal: "center" };
 
@@ -310,11 +330,12 @@ const Mris = () => {
       });
 
       const buffer = await workbook.xlsx.writeBuffer();
+
       saveAs(
         new Blob([buffer], {
           type: "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
         }),
-        `MRIS_${controlNoInput}.xlsx`,
+        `MRIS_${sheetName}.xlsx`,
       );
 
       messageApi.success("Excel exported successfully");

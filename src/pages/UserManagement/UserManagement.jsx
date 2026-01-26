@@ -69,7 +69,7 @@ const UserManagement = () => {
     (item) =>
       item.username.toLowerCase().includes(searchText) ||
       item.email.toLowerCase().includes(searchText) ||
-      item.usertypename.toLowerCase().includes(searchText)
+      item.usertypename.toLowerCase().includes(searchText),
   );
 
   const columns = [
@@ -94,6 +94,9 @@ const UserManagement = () => {
           >
             <Button danger>Delete</Button>
           </Popconfirm>
+          <Button type="primary">
+            {record.is_hidden ? "Lock User" : "Unlock User"}
+          </Button>
         </Space>
       ),
     },
@@ -120,6 +123,7 @@ const UserManagement = () => {
         <Button type="primary" onClick={handleAddUser}>
           Add User
         </Button>
+        <Button type="primary">Lock All User</Button>
       </Flex>
 
       {screens.md ? (
@@ -161,6 +165,7 @@ const UserManagement = () => {
                     Delete
                   </Button>
                 </Popconfirm>
+                <Button type="primary">Lock User</Button>
               </div>
             </Card>
           ))}
