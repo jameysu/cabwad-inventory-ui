@@ -65,14 +65,8 @@ const Login = () => {
             <Title level={4}>Cabuyao Water District Inventory System</Title>
           </Flex>
 
-          <Form.Item
-            name="email"
-            rules={[
-              { required: true, message: "Please input your email!" },
-              { type: "email", message: "Please enter a valid email!" },
-            ]}
-          >
-            <Input placeholder="Email" />
+          <Form.Item name="username">
+            <Input placeholder="Username" />
           </Form.Item>
 
           <Form.Item

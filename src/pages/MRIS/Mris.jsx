@@ -4,7 +4,6 @@ import {
   Button,
   Space,
   Typography,
-  Card,
   Grid,
   Modal,
   DatePicker,
@@ -13,6 +12,7 @@ import {
   Col,
   Checkbox,
   Spin,
+  Input,
 } from "antd";
 import ExcelJS from "exceljs";
 import { saveAs } from "file-saver";
@@ -63,6 +63,8 @@ const Mris = () => {
   const [qrStocks, setQrStocks] = useState([]);
   const [isPreviewModalOpen, setIsPreviewModalOpen] = useState(false);
 
+  const [controlNoInput, setControlNoInput] = useState("");
+
   useEffect(() => {
     if (!isQRModalOpen) return;
 
@@ -86,7 +88,7 @@ const Mris = () => {
             handleQrResult(decodedText);
             safeStopScanner(scanner);
             setIsQRModalOpen(false);
-          }
+          },
         );
       } catch {
         messageApi.error("Camera access denied or unavailable");
@@ -116,6 +118,7 @@ const Mris = () => {
   };
 
   const columns = [
+    { title: "Control Number", dataIndex: "control_no", key: "control_no" },
     { title: "Item Name", dataIndex: "description", key: "description" },
     { title: "Size", dataIndex: "size", key: "size" },
     { title: "Quantity", dataIndex: "quantity", key: "quantity" },
@@ -179,7 +182,7 @@ const Mris = () => {
     {
       title: "Type",
       dataIndex: "transaction_type",
-      render: (type) => ({ 1: "STOCK-IN", 2: "STOCK-OUT", 3: "RETURN" }[type]),
+      render: (type) => ({ 1: "STOCK-IN", 2: "STOCK-OUT", 3: "RETURN" })[type],
     },
     {
       title: "Action",
@@ -207,7 +210,7 @@ const Mris = () => {
     };
 
     return fetchStocksSuccess?.stocks.filter(
-      (d) => d.transaction_type === filterMap[filter]
+      (d) => d.transaction_type === filterMap[filter],
     );
   }, [fetchStocksSuccess?.stocks, filter]);
 
@@ -216,8 +219,8 @@ const Mris = () => {
 
   const handleDownload = async () => {
     try {
-      if (startDate && endDate && dayjs(startDate).isAfter(dayjs(endDate))) {
-        messageApi.error("Start date cannot be after End date.");
+      if (!controlNoInput.trim()) {
+        messageApi.error("Please enter a control number");
         return;
       }
 
@@ -227,86 +230,98 @@ const Mris = () => {
         3: "return",
       };
 
-      let exportData = fetchStocksSuccess?.stocks.map((item) => ({
-        ...item,
-        transaction_type:
-          transactionTypeMap[item.transaction_type] || "Unknown",
-      }));
+      let data =
+        fetchStocksSuccess?.stocks
+          ?.filter((s) => s.control_no === controlNoInput.trim())
+          ?.map((s) => ({
+            ...s,
+            type: transactionTypeMap[s.transaction_type],
+          })) || [];
 
-      if (downloadFilter.length > 0) {
-        exportData = exportData.filter((d) =>
-          downloadFilter.includes(d.transaction_type)
+      if (!data.length) {
+        messageApi.error(
+          `No stocks found under control number "${controlNoInput}"`,
         );
-      }
-
-      if (startDate) {
-        exportData = exportData.filter((d) =>
-          dayjs(d.date).isSameOrAfter(dayjs(startDate), "day")
-        );
-      }
-      if (endDate) {
-        exportData = exportData.filter((d) =>
-          dayjs(d.date).isSameOrBefore(dayjs(endDate), "day")
-        );
-      }
-
-      if (exportData.length === 0) {
-        messageApi.warning("No data found for the selected filters.");
         return;
       }
 
-      const workbook = new ExcelJS.Workbook();
-      const worksheet = workbook.addWorksheet("MRIS Records");
+      // 🔹 FILTER BY TRANSACTION TYPE
+      if (downloadFilter.length) {
+        data = data.filter((d) => downloadFilter.includes(d.type));
+      }
 
-      worksheet.columns = [
-        { header: "Item Name", key: "item", width: 25 },
-        { header: "Size", key: "size", width: 20 },
+      // 🔹 FILTER BY DATE
+      if (startDate) {
+        data = data.filter((d) =>
+          dayjs(d.createdAt).isSameOrAfter(startDate, "day"),
+        );
+      }
+
+      if (endDate) {
+        data = data.filter((d) =>
+          dayjs(d.createdAt).isSameOrBefore(endDate, "day"),
+        );
+      }
+
+      if (!data.length) {
+        messageApi.error("No data matched the selected filters");
+        return;
+      }
+
+      // 🔹 SINGLE CONTROL NUMBER → ONE SHEET
+      const workbook = new ExcelJS.Workbook();
+      const ws = workbook.addWorksheet(controlNoInput);
+
+      ws.mergeCells("A1:F1");
+      ws.getCell("A1").value = `CONTROL NUMBER: ${controlNoInput}`;
+      ws.getCell("A1").font = { bold: true, size: 14 };
+      ws.getCell("A1").alignment = { horizontal: "center" };
+
+      ws.addRow([]);
+
+      ws.columns = [
+        { header: "Item Name", key: "item", width: 30 },
+        { header: "Size", key: "size", width: 15 },
         { header: "Quantity", key: "quantity", width: 12 },
-        { header: "Total Amount(₱)", key: "amount", width: 15 },
-        { header: "Date", key: "date", width: 20 },
+        { header: "Total Amount (₱)", key: "amount", width: 18 },
+        { header: "Date", key: "date", width: 25 },
         { header: "Type", key: "type", width: 15 },
       ];
 
-      exportData.forEach((row) => {
-        worksheet.addRow({
-          item: row.description,
-          size: row.size,
-          quantity: row.quantity,
-          amount: row.total_price,
-          date: dayjs(row.createdAt).format("MMMM D, YYYY hh:mm A"),
-          type: row.transaction_type.toUpperCase(),
-        });
-      });
-
-      worksheet.getRow(1).eachCell((cell) => {
+      ws.getRow(3).eachCell((cell) => {
         cell.font = { bold: true, color: { argb: "FFFFFFFF" } };
         cell.fill = {
           type: "pattern",
           pattern: "solid",
           fgColor: { argb: "FF1677FF" },
         };
-        cell.alignment = { vertical: "middle", horizontal: "center" };
+        cell.alignment = { horizontal: "center" };
+      });
+
+      data.forEach((r) => {
+        ws.addRow({
+          item: r.description,
+          size: r.size,
+          quantity: r.quantity,
+          amount: r.total_price,
+          date: dayjs(r.createdAt).format("MMMM D, YYYY hh:mm A"),
+          type: r.type.toUpperCase(),
+        });
       });
 
       const buffer = await workbook.xlsx.writeBuffer();
+      saveAs(
+        new Blob([buffer], {
+          type: "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+        }),
+        `MRIS_${controlNoInput}.xlsx`,
+      );
 
-      const parts = ["MRIS"];
-      if (downloadFilter.length > 0)
-        parts.push(downloadFilter.join("_").replace(/-/g, ""));
-      if (startDate) parts.push(dayjs(startDate).format("YYYYMMDD"));
-      if (endDate) parts.push(dayjs(endDate).format("YYYYMMDD"));
-      const filename = `${parts.join("_")}.xlsx`;
-
-      const blob = new Blob([buffer], {
-        type: "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
-      });
-
-      saveAs(blob, filename);
-      messageApi.success("Excel file downloaded successfully!");
-      handleCloseModal();
-    } catch (error) {
-      console.error("Excel export error:", error);
-      messageApi.error("Failed to generate Excel file.");
+      messageApi.success("Excel exported successfully");
+      setIsModalOpen(false);
+    } catch (err) {
+      console.error(err);
+      messageApi.error("Excel export failed");
     }
   };
 
@@ -323,6 +338,7 @@ const Mris = () => {
       message.success("QR data loaded successfully");
     } catch (err) {
       message.error("Invalid QR code data");
+      console.log(err);
     }
   };
 
@@ -357,45 +373,54 @@ const Mris = () => {
   return (
     <MrisStyles>
       {contextHolder}
-      <Row justify="space-between" align="middle" style={{ marginBottom: 16 }}>
-        <Col>
-          <Title level={3}>Item Records</Title>
+      <Row
+        gutter={[12, 12]}
+        justify="space-between"
+        align="middle"
+        style={{ marginBottom: 16 }}
+      >
+        {/* Title */}
+        <Col xs={24} md="auto">
+          <Title level={3} style={{ margin: 0 }}>
+            Item Records
+          </Title>
         </Col>
 
-        <Col>
-          <Space wrap>
-            <Button type="primary" onClick={() => setIsQRModalOpen(true)}>
-              Create Request
-            </Button>
-
+        {/* Actions */}
+        <Col xs={24} md="auto">
+          <Space wrap size="middle">
+            {/* Download Action */}
             <Button type="primary" onClick={handleOpenModal}>
               Download Record
             </Button>
 
-            <Button
-              type={filter === "all" ? "primary" : "default"}
-              onClick={() => setFilter("all")}
-            >
-              All
-            </Button>
-            <Button
-              type={filter === "stock-in" ? "primary" : "default"}
-              onClick={() => setFilter("stock-in")}
-            >
-              Stock-In
-            </Button>
-            <Button
-              type={filter === "stock-out" ? "primary" : "default"}
-              onClick={() => setFilter("stock-out")}
-            >
-              Stock-Out
-            </Button>
-            <Button
-              type={filter === "return" ? "primary" : "default"}
-              onClick={() => setFilter("return")}
-            >
-              Return
-            </Button>
+            {/* Filter Group */}
+            <Space.Compact>
+              <Button
+                type={filter === "all" ? "primary" : "default"}
+                onClick={() => setFilter("all")}
+              >
+                All
+              </Button>
+              <Button
+                type={filter === "stock-in" ? "primary" : "default"}
+                onClick={() => setFilter("stock-in")}
+              >
+                Stock-In
+              </Button>
+              <Button
+                type={filter === "stock-out" ? "primary" : "default"}
+                onClick={() => setFilter("stock-out")}
+              >
+                Stock-Out
+              </Button>
+              <Button
+                type={filter === "return" ? "primary" : "default"}
+                onClick={() => setFilter("return")}
+              >
+                Return
+              </Button>
+            </Space.Compact>
           </Space>
         </Col>
       </Row>
@@ -415,6 +440,9 @@ const Mris = () => {
               const date = dayjs(item.createdAt);
               return (
                 <div key={item.id} className="mobile-card">
+                  <div className="card-row">
+                    <span>{item.control_no}</span>
+                  </div>
                   <div className="card-header">
                     <span className="item-name">{item.description}</span>
                     <span
@@ -422,15 +450,15 @@ const Mris = () => {
                         item.transaction_type === 1
                           ? "stock-in"
                           : item.transaction_type === 2
-                          ? "stock-out"
-                          : "return"
+                            ? "stock-out"
+                            : "return"
                       }`}
                     >
                       {item.transaction_type === 1
                         ? "STOCK-IN"
                         : item.transaction_type === 2
-                        ? "STOCK-OUT"
-                        : "RETURN"}
+                          ? "STOCK-OUT"
+                          : "RETURN"}
                     </span>
                   </div>
 
@@ -469,44 +497,43 @@ const Mris = () => {
       <Modal
         title="Download Records"
         open={isModalOpen}
-        onCancel={handleCloseModal}
+        onCancel={() => setIsModalOpen(false)}
         onOk={handleDownload}
         okText="Download"
         centered
-        destroyOnClose
       >
         <Space direction="vertical" style={{ width: "100%" }}>
-          <label>
-            <strong>Start Date</strong>
-          </label>
+          <Input
+            placeholder="Enter Control Number"
+            value={controlNoInput}
+            onChange={(e) => setControlNoInput(e.target.value)}
+            allowClear
+          />
+
           <DatePicker
+            placeholder="Start Date"
             value={startDate}
-            onChange={(d) => setStartDate(d)}
+            onChange={setStartDate}
             style={{ width: "100%" }}
-            allowClear
           />
 
-          <label>
-            <strong>End Date</strong>
-          </label>
           <DatePicker
+            placeholder="End Date"
             value={endDate}
-            onChange={(d) => setEndDate(d)}
+            onChange={setEndDate}
             style={{ width: "100%" }}
-            allowClear
+            disabledDate={(d) => startDate && d.isBefore(startDate, "day")}
           />
 
-          <label>
-            <strong>Filter Type</strong>
-          </label>
+          <Text strong>Transaction Type</Text>
           <Checkbox.Group
             options={STATUS_OPTIONS}
             value={downloadFilter}
             onChange={setDownloadFilter}
-            style={{ display: "flex", gap: 8 }}
           />
         </Space>
       </Modal>
+
       <Modal
         title="Scan QR Code"
         open={isQRModalOpen}

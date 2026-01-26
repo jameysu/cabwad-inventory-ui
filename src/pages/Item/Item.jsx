@@ -91,7 +91,7 @@ const Item = () => {
       [i.item, i.brand, i.category]
         .join(" ")
         .toLowerCase()
-        .includes(searchTerm.toLowerCase())
+        .includes(searchTerm.toLowerCase()),
     );
   }, [searchTerm, items]);
 
@@ -140,7 +140,7 @@ const Item = () => {
             handleQrResult(decodedText);
             safeStopScanner(scanner);
             setIsQRModalOpen(false);
-          }
+          },
         );
       } catch {
         messageApi.error("Camera access denied or unavailable");
@@ -212,10 +212,17 @@ const Item = () => {
   };
 
   const handleSubmitGenerateQR = async () => {
+    const { control_no } = generateQRForm.getFieldsValue();
+
+    if (!control_no) {
+      messageApi.warning("Control Number is required");
+      return;
+    }
+
     const stocks = qrItems.map(({ id, ...rest }) => ({
       ...rest,
       item_id: id,
-      // transaction_type: transactionType,
+      control_no,
     }));
 
     const payload = { stocks };
@@ -225,13 +232,11 @@ const Item = () => {
       const qrImage = await QRCode.toDataURL(qrString);
 
       setGeneratedQR(qrImage);
-
       setQrItems([]);
       generateQRForm.resetFields();
       setOpenQRModal(false);
     } catch (err) {
       messageApi.error("Failed to generate QR");
-      console.log(err);
     }
   };
 
@@ -381,7 +386,7 @@ const Item = () => {
     {
       title: "Type",
       dataIndex: "transaction_type",
-      render: (type) => ({ 1: "STOCK-IN", 2: "STOCK-OUT", 3: "RETURN" }[type]),
+      render: (type) => ({ 1: "STOCK-IN", 2: "STOCK-OUT", 3: "RETURN" })[type],
     },
     {
       title: "Action",
@@ -585,7 +590,7 @@ const Item = () => {
                   value && Number(value) > 0
                     ? Promise.resolve()
                     : Promise.reject(
-                        new Error("Quantity must be greater than 0")
+                        new Error("Quantity must be greater than 0"),
                       ),
               },
             ]}
