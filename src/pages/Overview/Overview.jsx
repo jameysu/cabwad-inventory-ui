@@ -1,37 +1,55 @@
-import { Typography, Card, Flex, Image } from "antd";
+import { Typography, Card, Flex } from "antd";
 import OverviewStyle from "./Overview.styles";
-import { DollarOutlined } from "@ant-design/icons";
+import {
+  DollarOutlined,
+  ShoppingCartOutlined,
+  AppstoreOutlined,
+} from "@ant-design/icons";
 
 const { Text, Title } = Typography;
 
 const Overview = () => {
   return (
     <OverviewStyle>
-      <Flex justify="space-around" wrap gap={10}>
-        <Card className="inventory-cost">
-          <Flex>
-            <DollarOutlined style={{ color: "white", fontSize: "70px" }} />
+      <Flex className="overview-grid">
+        <Card className="overview-card inventory-cost">
+          <Flex align="center" gap={16}>
+            <div className="icon-wrapper">
+              <DollarOutlined />
+            </div>
             <Flex vertical>
-              <Text>Total Inventory Cost</Text>
-              <Title level={4}>₱276,289</Title>
+              <Text className="label">Total Inventory Cost</Text>
+              <Title level={4} className="value">
+                ₱276,289
+              </Title>
             </Flex>
           </Flex>
         </Card>
-        <Card className="items-out-cost">
-          <Flex>
-            <DollarOutlined style={{ color: "white", fontSize: "70px" }} />
+
+        <Card className="overview-card items-out-cost">
+          <Flex align="center" gap={16}>
+            <div className="icon-wrapper">
+              <ShoppingCartOutlined />
+            </div>
             <Flex vertical>
-              <Text>Total Inventory Cost</Text>
-              <Title level={4}>₱276,289</Title>
+              <Text className="label">Items Released</Text>
+              <Title level={4} className="value">
+                ₱120,540
+              </Title>
             </Flex>
           </Flex>
         </Card>
-        <Card className="total-product">
-          <Flex>
-            <DollarOutlined style={{ color: "white", fontSize: "70px" }} />
+
+        <Card className="overview-card total-product">
+          <Flex align="center" gap={16}>
+            <div className="icon-wrapper">
+              <AppstoreOutlined />
+            </div>
             <Flex vertical>
-              <Text>Total Inventory Cost</Text>
-              <Title level={4}>₱276,289</Title>
+              <Text className="label">Total Products</Text>
+              <Title level={4} className="value">
+                1,248
+              </Title>
             </Flex>
           </Flex>
         </Card>

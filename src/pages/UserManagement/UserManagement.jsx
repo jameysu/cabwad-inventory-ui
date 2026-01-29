@@ -16,6 +16,7 @@ import { Grid } from "antd";
 import {
   useGetUsersQuery,
   useLockUnlockAllUsersMutation,
+  useLockUnlockUserMutation,
 } from "../../services/authApi";
 import UserModal from "./UserModal";
 import { UserOutlined } from "@ant-design/icons";
@@ -33,6 +34,9 @@ const UserManagement = () => {
 
   const [lockUnlockAllUsers, { isLoading: isLockingAll }] =
     useLockUnlockAllUsersMutation();
+
+  const [lockUnlockUser, { isLoading: isLockingUser }] =
+    useLockUnlockUserMutation();
 
   const [searchText, setSearchText] = useState("");
   const [openModal, setOpenModal] = useState(false);
@@ -97,6 +101,28 @@ const UserManagement = () => {
     }
   };
 
+  const handleLockUnlockUser = async (record) => {
+    try {
+      const identity = localStorage.getItem("identity");
+      const identityJson = JSON.parse(identity);
+      console.log(record, identityJson);
+      await lockUnlockUser({
+        userid: record.key,
+        currentuserid: identityJson.userid,
+      }).unwrap();
+
+      message.success(
+        `User "${record.username}" ${
+          record.ishidden ? "unlocked" : "locked"
+        } successfully`,
+      );
+
+      refetch();
+    } catch (error) {
+      message.error(error?.data?.message || "Failed to update user status");
+    }
+  };
+
   const columns = [
     { title: "Username", dataIndex: "username", key: "username" },
     { title: "Email", dataIndex: "email", key: "email" },
@@ -124,9 +150,10 @@ const UserManagement = () => {
           <Button type="primary" onClick={() => handleUpdate(record)}>
             Update
           </Button>
+
           <Popconfirm
             title="Are you sure you want to delete this user?"
-            description={`This action cannot be undone.`}
+            description="This action cannot be undone."
             okText="Yes, delete"
             cancelText="Cancel"
             okButtonProps={{ danger: true }}
@@ -134,8 +161,9 @@ const UserManagement = () => {
           >
             <Button danger>Delete</Button>
           </Popconfirm>
-          <Button type="primary">
-            {record.ishidden ? "Lock User" : "Unlock User"}
+
+          <Button type="primary" onClick={() => handleLockUnlockUser(record)}>
+            {record.ishidden ? "Unlock User" : "Lock User"}
           </Button>
         </Space>
       ),
@@ -232,7 +260,14 @@ const UserManagement = () => {
                     Delete
                   </Button>
                 </Popconfirm>
-                <Button type="primary">Lock User</Button>
+                <Button
+                  type="primary"
+                  size="small"
+                  loading={isLockingUser}
+                  onClick={() => handleLockUnlockUser(user)}
+                >
+                  {user.ishidden ? "Unlock User" : "Lock User"}
+                </Button>
               </div>
             </Card>
           ))}
