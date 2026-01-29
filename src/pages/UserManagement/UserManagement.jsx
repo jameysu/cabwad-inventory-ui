@@ -13,7 +13,10 @@ import {
   Popconfirm,
 } from "antd";
 import { Grid } from "antd";
-import { useGetUsersQuery } from "../../services/authApi";
+import {
+  useGetUsersQuery,
+  useLockUnlockAllUsersMutation,
+} from "../../services/authApi";
 import UserModal from "./UserModal";
 import { UserOutlined } from "@ant-design/icons";
 
@@ -27,6 +30,9 @@ const UserManagement = () => {
     isError: getUsersFailed,
     refetch,
   } = useGetUsersQuery();
+
+  const [lockUnlockAllUsers, { isLoading: isLockingAll }] =
+    useLockUnlockAllUsersMutation();
 
   const [searchText, setSearchText] = useState("");
   const [openModal, setOpenModal] = useState(false);
@@ -58,6 +64,7 @@ const UserManagement = () => {
         username: user.username,
         email: user.email,
         usertypename: user.usertypename || "N/A",
+        ishidden: user.ishidden,
         usertype: user.usertype,
         createdAt: user.createdAt,
       }));
@@ -72,10 +79,43 @@ const UserManagement = () => {
       item.usertypename.toLowerCase().includes(searchText),
   );
 
+  const handleLockUnlockAll = async (isLockOrUnlock) => {
+    try {
+      const identity = localStorage.getItem("identity");
+      const identityJson = JSON.parse(identity);
+      console.log(identityJson);
+
+      await lockUnlockAllUsers({
+        currentuserid: identityJson.userid,
+        isLockOrUnlock,
+      }).unwrap();
+
+      message.success("User lock state updated successfully");
+      refetch();
+    } catch (error) {
+      message.error(error?.data?.message || "Failed to lock/unlock all users");
+    }
+  };
+
   const columns = [
     { title: "Username", dataIndex: "username", key: "username" },
     { title: "Email", dataIndex: "email", key: "email" },
     { title: "User Type", dataIndex: "usertypename", key: "usertypename" },
+    {
+      title: "Status",
+      dataIndex: "ishidden",
+      key: "ishidden",
+      render: (_, record) => (
+        <span
+          style={{
+            color: record.ishidden ? "#cf1322" : "#389e0d",
+            fontWeight: 500,
+          }}
+        >
+          {record.ishidden ? "Locked" : "Unlocked"}
+        </span>
+      ),
+    },
     {
       title: "Actions",
       key: "actions",
@@ -95,7 +135,7 @@ const UserManagement = () => {
             <Button danger>Delete</Button>
           </Popconfirm>
           <Button type="primary">
-            {record.is_hidden ? "Lock User" : "Unlock User"}
+            {record.ishidden ? "Lock User" : "Unlock User"}
           </Button>
         </Space>
       ),
@@ -123,7 +163,20 @@ const UserManagement = () => {
         <Button type="primary" onClick={handleAddUser}>
           Add User
         </Button>
-        <Button type="primary">Lock All User</Button>
+        <Button
+          type="primary"
+          loading={isLockingAll}
+          onClick={() => handleLockUnlockAll(true)}
+        >
+          Lock Users
+        </Button>
+        <Button
+          type="primary"
+          loading={isLockingAll}
+          onClick={() => handleLockUnlockAll(false)}
+        >
+          Unlock Users
+        </Button>
       </Flex>
 
       {screens.md ? (
@@ -137,10 +190,24 @@ const UserManagement = () => {
                 <div>
                   <p className="username">{user.username}</p>
                   <p className="detail">
-                    <b>Email:</b> {user.email}
+                    <strong>Email: </strong> {user.email}
                   </p>
                   <p className="detail">
-                    <b>User Type:</b> {user.usertypename}
+                    <strong>User Type: </strong>
+                    {user.usertypename}
+                  </p>
+                  <p className="detail">
+                    <p className="detail">
+                      <strong>Status: </strong>{" "}
+                      <span
+                        style={{
+                          color: user.ishidden ? "#cf1322" : "#389e0d",
+                          fontWeight: 500,
+                        }}
+                      >
+                        {user.ishidden ? "Locked" : "Unlocked"}
+                      </span>
+                    </p>
                   </p>
                 </div>
               </Flex>

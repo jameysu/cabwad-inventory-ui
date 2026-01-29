@@ -14,6 +14,7 @@ export const authApi = createApi({
     }),
     getUsers: builder.query({
       query: () => "auth/users",
+      providesTags: ["Users"],
     }),
     addUser: builder.mutation({
       query: (body) => ({
@@ -31,6 +32,14 @@ export const authApi = createApi({
       }),
       invalidatesTags: ["Users"],
     }),
+    lockUnlockAllUsers: builder.mutation({
+      query: (body) => ({
+        url: "auth/users/lock-unlock-all",
+        method: "PUT",
+        body,
+      }),
+      invalidatesTags: ["Users"],
+    }),
   }),
 });
 
@@ -39,4 +48,5 @@ export const {
   useGetUsersQuery,
   useAddUserMutation,
   useUpdateUserMutation,
+  useLockUnlockAllUsersMutation,
 } = authApi;
