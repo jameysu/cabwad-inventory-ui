@@ -48,6 +48,11 @@ const Item = () => {
     },
   ] = useDeleteItemMutation();
 
+  const identity = localStorage.getItem("identity");
+  const role = identity ? Number(JSON.parse(identity)?.usertype) : null;
+
+  const isAdmin = role === 1;
+
   const [messageApi, contextHolder] = message.useMessage();
   const [addStocks, { isLoading: isSubmitting }] = useAddStocksMutation();
 
@@ -338,35 +343,41 @@ const Item = () => {
     { title: "Stock In", dataIndex: "stock_in", key: "stock_in" },
     { title: "Stock Out", dataIndex: "stock_out", key: "stock_out" },
     { title: "Quantity", dataIndex: "quantity", key: "quantity" },
-    {
-      key: "actions",
-      align: "center",
-      render: (_, record) => {
-        const menuItems = [
-          { key: "update", label: "Update", onClick: () => handleEdit(record) },
-          // {
-          //   key: "export",
-          //   label: "Export QR",
-          //   onClick: () => handleExportSinglePDF(record),
-          // },
-          {
-            key: "delete",
-            label: "Delete",
-            onClick: () => handleDelete(record.id),
-          },
-        ];
 
-        return (
-          <Dropdown
-            menu={{ items: menuItems }}
-            trigger={["click"]}
-            placement="bottomRight"
-          >
-            <Button icon={<EllipsisOutlined />} />
-          </Dropdown>
-        );
-      },
-    },
+    // ✅ ADMIN ONLY
+    ...(isAdmin
+      ? [
+          {
+            key: "actions",
+            title: "Action",
+            align: "center",
+            render: (_, record) => {
+              const menuItems = [
+                {
+                  key: "update",
+                  label: "Update",
+                  onClick: () => handleEdit(record),
+                },
+                {
+                  key: "delete",
+                  label: "Delete",
+                  onClick: () => handleDelete(record.id),
+                },
+              ];
+
+              return (
+                <Dropdown
+                  menu={{ items: menuItems }}
+                  trigger={["click"]}
+                  placement="bottomRight"
+                >
+                  <Button icon={<EllipsisOutlined />} />
+                </Dropdown>
+              );
+            },
+          },
+        ]
+      : []),
   ];
 
   const qrColumns = [
@@ -428,15 +439,19 @@ const Item = () => {
           allowClear
           onChange={(e) => setSearchTerm(e.target.value)}
         />
-        <Button type="primary" onClick={handleAdd}>
-          Add Item
-        </Button>
-        <Button type="primary" onClick={handleGenerateQR}>
-          Generate Request
-        </Button>
-        <Button type="primary" onClick={() => setIsQRModalOpen(true)}>
-          Create Request
-        </Button>
+        {isAdmin && (
+          <>
+            <Button type="primary" onClick={handleAdd}>
+              Add Item
+            </Button>
+            <Button type="primary" onClick={handleGenerateQR}>
+              Generate Request
+            </Button>
+            <Button type="primary" onClick={() => setIsQRModalOpen(true)}>
+              Create Request
+            </Button>
+          </>
+        )}
       </Flex>
 
       {!isMobile && (
@@ -453,34 +468,31 @@ const Item = () => {
             <div className="mobile-card" key={record.key}>
               <div className="mobile-header">
                 <h4>{record.item}</h4>
-                <Dropdown
-                  menu={{
-                    items: [
-                      {
-                        key: "update",
-                        label: "Update",
-                        onClick: () => handleEdit(record),
-                      },
-                      {
-                        key: "export",
-                        label: "Export QR",
-                        onClick: () => handleExportSinglePDF(record),
-                      },
-                      {
-                        key: "delete",
-                        label: "Delete",
-                        onClick: () => handleDelete(record.key),
-                      },
-                    ],
-                  }}
-                  trigger={["click"]}
-                >
-                  <Button
-                    icon={<EllipsisOutlined />}
-                    type="text"
-                    className="dropdown-btn"
-                  />
-                </Dropdown>
+                {isAdmin && (
+                  <Dropdown
+                    menu={{
+                      items: [
+                        {
+                          key: "update",
+                          label: "Update",
+                          onClick: () => handleEdit(record),
+                        },
+                        {
+                          key: "delete",
+                          label: "Delete",
+                          onClick: () => handleDelete(record.key),
+                        },
+                      ],
+                    }}
+                    trigger={["click"]}
+                  >
+                    <Button
+                      icon={<EllipsisOutlined />}
+                      type="text"
+                      className="dropdown-btn"
+                    />
+                  </Dropdown>
+                )}
               </div>
 
               <p className="brand">{record.brand}</p>

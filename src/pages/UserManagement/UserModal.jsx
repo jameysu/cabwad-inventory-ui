@@ -20,7 +20,7 @@ const UserModal = ({ open, onCancel, selectedUser, refetch }) => {
         username: selectedUser.username,
         email: selectedUser.email,
         password: "",
-        usertype: selectedUser.usertypename,
+        usertype: String(selectedUser.usertype), // ✅ correct value
       });
     } else {
       form.resetFields();
@@ -30,21 +30,21 @@ const UserModal = ({ open, onCancel, selectedUser, refetch }) => {
   const handleSubmit = async () => {
     try {
       const values = await form.validateFields();
-      console.log("values", values);
+
       if (isEdit) {
         const data = {
           userid: selectedUser.key,
-          ...values,
-          usertype: String(selectedUser.usertype),
+          ...values, // ✅ includes selected usertype
         };
+
         await updateUser(data).unwrap();
         message.success("User updated successfully!");
       } else {
         await addUser(values).unwrap();
         message.success("User added successfully!");
       }
-      refetch();
 
+      refetch();
       onCancel();
       form.resetFields();
     } catch (error) {

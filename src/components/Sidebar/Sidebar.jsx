@@ -3,14 +3,9 @@ import { Button, Flex, Image, Menu, message, Typography } from "antd";
 import {
   MenuOutlined,
   HomeOutlined,
-  UnorderedListOutlined,
   FileDoneOutlined,
   LogoutOutlined,
-  RiseOutlined,
-  HistoryOutlined,
   TableOutlined,
-  ContainerOutlined,
-  HddOutlined,
   UserOutlined,
 } from "@ant-design/icons";
 import SidebarStyles from "./Sidebar.styles";
@@ -22,11 +17,11 @@ const { Text } = Typography;
 const Sidebar = () => {
   const navigate = useNavigate();
   const [messageApi, contextHolder] = message.useMessage();
-
   const [open, setOpen] = useState(false);
 
+  // ✅ Safe identity parsing
   const identity = localStorage.getItem("identity");
-  const role = JSON.parse(identity).usertype;
+  const role = identity ? Number(JSON.parse(identity)?.usertype) : null;
 
   const handleLogout = () => {
     messageApi
@@ -37,6 +32,7 @@ const Sidebar = () => {
       })
       .then(() => {
         localStorage.removeItem("token");
+        localStorage.removeItem("identity");
         navigate("/");
       });
   };
@@ -46,54 +42,22 @@ const Sidebar = () => {
     if (e.key === "logout") handleLogout();
   };
 
-  let menuItems = [
+  // ✅ Base menu
+  const menuItems = [
     {
       key: "dashboard",
       icon: <HomeOutlined />,
-      label: <Link to={"/portal/"}>Dashboard</Link>,
-      // children: [
-      //   {
-      //     key: "overview",
-      //     icon: <RiseOutlined />,
-      //     label: <Link to={"/portal/"}>Overview</Link>,
-      //   },
-      //   {
-      //     key: "inventory-history",
-      //     icon: <HistoryOutlined />,
-      //     label: (
-      //       <Link to={"/portal/inventory-history"}>Inventory History</Link>
-      //     ),
-      //   },
-      // ],
+      label: <Link to="/portal/">Dashboard</Link>,
     },
     {
       key: "report",
       icon: <TableOutlined />,
       label: <Link to="/portal/mris">MRIS</Link>,
-      // children: [
-      //   {
-      //     key: "mris",
-      //     icon: <UnorderedListOutlined />,
-      //     label: <Link to="/portal/mris">MRIS</Link>,
-      //   },
-      // ],
     },
     {
       key: "inventory",
       icon: <FileDoneOutlined />,
       label: <Link to="/portal/item">Item</Link>,
-      // children: [
-      //   {
-      //     key: "item",
-      //     icon: <ContainerOutlined />,
-      //     label: <Link to="/portal/item">Item</Link>,
-      //   },
-      //   {
-      //     key: "item-master",
-      //     icon: <HddOutlined />,
-      //     label: <Link to="/portal/item-master">Item Master</Link>,
-      //   },
-      // ],
     },
     {
       key: "logout",
@@ -102,6 +66,7 @@ const Sidebar = () => {
     },
   ];
 
+  // ✅ Admin-only menu
   if (role === 1) {
     menuItems.splice(menuItems.length - 1, 0, {
       key: "user",
@@ -125,6 +90,7 @@ const Sidebar = () => {
           <div className="sidebar-overlay" onClick={() => setOpen(false)} />
         )}
 
+        {/* MOBILE */}
         <div className={`mobile-sidebar ${open ? "open" : ""}`}>
           <Flex gap={5} style={{ padding: "20px" }}>
             <Image width={60} preview={false} src={cabwadLogo} />
@@ -133,14 +99,11 @@ const Sidebar = () => {
               <Text>CABUYAO WATER DISTRICT</Text>
             </Flex>
           </Flex>
-          <Menu
-            mode="inline"
-            defaultSelectedKeys={["overview"]}
-            items={menuItems}
-            onClick={handleMenuClick}
-          />
+
+          <Menu mode="inline" items={menuItems} onClick={handleMenuClick} />
         </div>
 
+        {/* DESKTOP */}
         <div className="desktop-sidebar">
           <Flex gap={5} style={{ padding: "20px" }}>
             <Image width={60} preview={false} src={cabwadLogo} />
@@ -149,12 +112,8 @@ const Sidebar = () => {
               <Text>CABUYAO WATER DISTRICT</Text>
             </Flex>
           </Flex>
-          <Menu
-            mode="inline"
-            defaultSelectedKeys={["overview"]}
-            items={menuItems}
-            onClick={handleMenuClick}
-          />
+
+          <Menu mode="inline" items={menuItems} onClick={handleMenuClick} />
         </div>
       </SidebarStyles>
     </>
