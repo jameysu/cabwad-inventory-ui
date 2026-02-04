@@ -21,14 +21,11 @@ const SidebarStyles = styled.div`
 
   .sidebar-overlay {
     position: fixed;
-    top: 0;
-    left: 0;
-    right: 0;
-    bottom: 0;
-    /* background: rgba(0, 0, 0, 0.4); */
+    inset: 0;
     z-index: 800;
   }
 
+  /* ================= MOBILE ================= */
   .mobile-sidebar {
     position: fixed;
     top: 0;
@@ -40,27 +37,31 @@ const SidebarStyles = styled.div`
     transition: left 0.3s ease;
     z-index: 850;
 
-    @media (min-width: 768px) {
-      display: none;
-    }
+    display: flex;
+    flex-direction: column;
 
     &.open {
       left: 0;
     }
 
+    @media (min-width: 768px) {
+      display: none;
+    }
+
     .ant-menu {
-      height: 100%;
+      flex: 1;
       border-inline-end: none;
       background: transparent;
       color: #fff;
     }
 
-    .ant-menu-item,
-    .ant-menu-submenu-title {
-      color: #fff !important;
+    .logout-wrapper {
+      border-top: 1px solid rgba(255, 255, 255, 0.25);
     }
 
-    .ant-menu-submenu-arrow {
+    .ant-menu-item,
+    .ant-menu-submenu-title,
+    .anticon {
       color: #fff !important;
     }
 
@@ -68,40 +69,43 @@ const SidebarStyles = styled.div`
       background-color: rgba(255, 255, 255, 0.2) !important;
     }
 
-    .ant-menu-item:hover,
-    .ant-menu-submenu-title:hover {
+    .ant-menu-item:hover {
       background-color: rgba(255, 255, 255, 0.1) !important;
-    }
-
-    .anticon {
-      color: #fff !important;
     }
   }
 
+  /* ================= DESKTOP ================= */
   .desktop-sidebar {
-    display: none;
-    height: 100vh;
-    width: 300px;
     position: fixed;
     top: 0;
     left: 0;
+    width: 300px;
+    height: 100vh;
     background: #2c50a5;
     box-shadow: 2px 0 8px rgba(0, 0, 0, 0.1);
     z-index: 850;
 
+    display: none;
+    flex-direction: column;
+
+    @media (min-width: 768px) {
+      display: flex;
+    }
+
     .ant-menu {
-      height: 100%;
+      flex: 1;
       border-inline-end: none;
       background: transparent;
       color: #fff;
     }
 
-    .ant-menu-item,
-    .ant-menu-submenu-title {
-      color: #fff !important;
+    .logout-wrapper {
+      border-top: 1px solid rgba(255, 255, 255, 0.25);
     }
 
-    .ant-menu-submenu-arrow {
+    .ant-menu-item,
+    .ant-menu-submenu-title,
+    .anticon {
       color: #fff !important;
     }
 
@@ -109,17 +113,8 @@ const SidebarStyles = styled.div`
       background-color: rgba(255, 255, 255, 0.2) !important;
     }
 
-    .ant-menu-item:hover,
-    .ant-menu-submenu-title:hover {
+    .ant-menu-item:hover {
       background-color: rgba(255, 255, 255, 0.1) !important;
-    }
-
-    .anticon {
-      color: #fff !important;
-    }
-
-    @media (min-width: 768px) {
-      display: block;
     }
   }
 `;

@@ -49,9 +49,13 @@ const Item = () => {
   ] = useDeleteItemMutation();
 
   const identity = localStorage.getItem("identity");
-  const role = identity ? Number(JSON.parse(identity)?.usertype) : null;
+  const parsedIdentity = identity ? JSON.parse(identity) : null;
+
+  const role = parsedIdentity ? Number(parsedIdentity.usertype) : null;
+  const isHidden = parsedIdentity?.ishidden === true;
 
   const isAdmin = role === 1;
+  const isInventory = role === 3;
 
   const [messageApi, contextHolder] = message.useMessage();
   const [addStocks, { isLoading: isSubmitting }] = useAddStocksMutation();
@@ -84,7 +88,7 @@ const Item = () => {
       quantity: i.quantity,
       stock_in: i.stockin,
       stock_out: i.stockout,
-      stock_return: i.return,
+      return: i.return,
       added_by: i.added_by,
       createdAt: i.createdAt,
     }));
@@ -168,6 +172,16 @@ const Item = () => {
     setOpenModal(true);
   };
 
+  const getDateTimeString = () => {
+    const now = new Date();
+
+    const pad = (n) => n.toString().padStart(2, "0");
+
+    return `${now.getFullYear()}${pad(now.getMonth() + 1)}${pad(
+      now.getDate(),
+    )}_${pad(now.getHours())}${pad(now.getMinutes())}${pad(now.getSeconds())}`;
+  };
+
   const handleExportSinglePDF = async (record) => {
     try {
       const itemId = record.key || record.id || record.item || "Unknown_Item";
@@ -236,11 +250,15 @@ const Item = () => {
       const qrString = JSON.stringify(payload);
       const qrImage = await QRCode.toDataURL(qrString);
 
-      setGeneratedQR(qrImage);
+      setGeneratedQR({
+        image: qrImage,
+        control_no,
+      });
+
       setQrItems([]);
       generateQRForm.resetFields();
       setOpenQRModal(false);
-    } catch (err) {
+    } catch {
       messageApi.error("Failed to generate QR");
     }
   };
@@ -342,10 +360,10 @@ const Item = () => {
     },
     { title: "Stock In", dataIndex: "stock_in", key: "stock_in" },
     { title: "Stock Out", dataIndex: "stock_out", key: "stock_out" },
-    { title: "Quantity", dataIndex: "quantity", key: "quantity" },
+    { title: "Return", dataIndex: "return", key: "return" },
+    { title: "Total Quantity", dataIndex: "quantity", key: "quantity" },
 
-    // ✅ ADMIN ONLY
-    ...(isAdmin
+    ...(!isHidden && (isAdmin || isInventory)
       ? [
           {
             key: "actions",
@@ -361,7 +379,7 @@ const Item = () => {
                 {
                   key: "delete",
                   label: "Delete",
-                  onClick: () => handleDelete(record.id),
+                  onClick: () => handleDelete(record.key),
                 },
               ];
 
@@ -439,7 +457,7 @@ const Item = () => {
           allowClear
           onChange={(e) => setSearchTerm(e.target.value)}
         />
-        {isAdmin && (
+        {!isHidden && (isAdmin || isInventory) && (
           <>
             <Button type="primary" onClick={handleAdd}>
               Add Item
@@ -468,31 +486,32 @@ const Item = () => {
             <div className="mobile-card" key={record.key}>
               <div className="mobile-header">
                 <h4>{record.item}</h4>
-                {isAdmin && (
-                  <Dropdown
-                    menu={{
-                      items: [
-                        {
-                          key: "update",
-                          label: "Update",
-                          onClick: () => handleEdit(record),
-                        },
-                        {
-                          key: "delete",
-                          label: "Delete",
-                          onClick: () => handleDelete(record.key),
-                        },
-                      ],
-                    }}
-                    trigger={["click"]}
-                  >
-                    <Button
-                      icon={<EllipsisOutlined />}
-                      type="text"
-                      className="dropdown-btn"
-                    />
-                  </Dropdown>
-                )}
+                {isAdmin ||
+                  (isInventory && (
+                    <Dropdown
+                      menu={{
+                        items: [
+                          {
+                            key: "update",
+                            label: "Update",
+                            onClick: () => handleEdit(record),
+                          },
+                          {
+                            key: "delete",
+                            label: "Delete",
+                            onClick: () => handleDelete(record.key),
+                          },
+                        ],
+                      }}
+                      trigger={["click"]}
+                    >
+                      <Button
+                        icon={<EllipsisOutlined />}
+                        type="text"
+                        className="dropdown-btn"
+                      />
+                    </Dropdown>
+                  ))}
               </div>
 
               <p className="brand">{record.brand}</p>
@@ -529,7 +548,7 @@ const Item = () => {
         >
           <Flex vertical align="center" gap={16}>
             <img
-              src={generatedQR}
+              src={generatedQR.image}
               alt="Generated QR"
               style={{ width: 250, height: 250 }}
             />
@@ -537,9 +556,12 @@ const Item = () => {
             <Button
               type="primary"
               onClick={() => {
+                const dateTime = getDateTimeString();
+                const filename = `CN_${generatedQR.control_no}_${dateTime}.png`;
+
                 const link = document.createElement("a");
-                link.href = generatedQR;
-                link.download = "request-qr.png";
+                link.href = generatedQR.image;
+                link.download = filename;
                 link.click();
               }}
             >
@@ -548,6 +570,7 @@ const Item = () => {
           </Flex>
         </Modal>
       )}
+
       <Modal
         open={openQRModal}
         onCancel={() => setOpenQRModal(false)}
@@ -587,7 +610,7 @@ const Item = () => {
               {filteredItems.map((item) => {
                 return (
                   <Option value={item.key} key={item.key}>
-                    {`${item.brand} ${item.item}`}
+                    {`${item.brand} ${item.item} ${item.size}`}
                   </Option>
                 );
               })}

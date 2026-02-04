@@ -32,6 +32,14 @@ export const authApi = createApi({
       }),
       invalidatesTags: ["Users"],
     }),
+    deleteUser: builder.mutation({
+      query: (id) => ({
+        url: "auth/delete-user",
+        method: "PUT",
+        body: { id },
+      }),
+      invalidatesTags: ["Users"],
+    }),
     lockUnlockAllUsers: builder.mutation({
       query: (body) => ({
         url: "auth/users/lock-unlock-all",
@@ -58,4 +66,5 @@ export const {
   useUpdateUserMutation,
   useLockUnlockAllUsersMutation,
   useLockUnlockUserMutation,
+  useDeleteUserMutation,
 } = authApi;

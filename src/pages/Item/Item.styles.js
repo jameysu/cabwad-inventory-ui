@@ -2,10 +2,11 @@ import styled from "styled-components";
 
 const ItemStyles = styled.div`
   padding: 16px;
-  background-color: #f7f8fa;
+  background-color: #f5f6fa;
   height: 100%;
   overflow-y: auto;
 
+  /* ================= SEARCH / ACTION BAR ================= */
   .ant-flex.search-container {
     margin-bottom: 20px;
     flex-wrap: wrap;
@@ -18,8 +19,8 @@ const ItemStyles = styled.div`
 
     .search-input {
       width: 280px;
-      border-radius: 8px;
-      box-shadow: 0 2px 6px rgba(0, 0, 0, 0.05);
+      border-radius: 10px;
+      box-shadow: 0 2px 8px rgba(0, 0, 0, 0.06);
 
       @media (max-width: 768px) {
         width: 100% !important;
@@ -27,48 +28,62 @@ const ItemStyles = styled.div`
     }
 
     .ant-btn-primary {
-      border-radius: 8px;
+      border-radius: 10px;
       font-weight: 600;
       height: 40px;
     }
   }
 
+  /* ================= TABLE WRAPPER ================= */
   .ant-table {
-    background: #fff;
-    border-radius: 14px;
-    box-shadow: 0 2px 10px rgba(0, 0, 0, 0.05);
+    background: #ffffff;
+    border-radius: 16px;
+    box-shadow: 0 8px 20px rgba(0, 0, 0, 0.06);
     overflow: hidden;
   }
 
+  /* ================= TABLE HEADER ================= */
   .ant-table-thead > tr > th {
-    background: #f0f2f5 !important;
-    color: #1f1f1f;
-    font-weight: 600;
-    font-size: 14px;
-    border-bottom: 1px solid #e8e8e8;
+    background: linear-gradient(180deg, #fafafa, #f0f2f5) !important;
+    color: #1f2937;
+    font-weight: 700;
+    font-size: 13px;
+    padding: 14px 16px !important;
+    border-bottom: 1px solid #e5e7eb;
     text-transform: uppercase;
-    letter-spacing: 0.3px;
+    letter-spacing: 0.4px;
   }
 
+  /* ================= TABLE BODY ================= */
   .ant-table-tbody > tr > td {
-    padding: 12px 16px !important;
+    padding: 14px 16px !important;
     font-size: 14px;
-    color: #333;
-    transition: background 0.2s ease;
+    color: #374151;
+    border-bottom: 1px solid #f0f0f0;
+    transition: background-color 0.2s ease;
   }
 
+  .ant-table-tbody > tr:last-child > td {
+    border-bottom: none;
+  }
+
+  /* ================= ROW HOVER ================= */
   .ant-table-tbody > tr:hover > td {
-    background-color: #f9f9f9;
+    background-color: #f9fafb;
   }
 
+  /* ================= CENTER ALIGN FIX ================= */
   .ant-table-cell[align="center"] {
     text-align: center !important;
   }
 
+  /* ================= PAGINATION ================= */
   .ant-pagination {
     margin-top: 20px;
+    padding: 0 8px;
   }
 
+  /* ================= MOBILE GRID ================= */
   .mobile-grid {
     display: grid;
     grid-template-columns: repeat(auto-fill, minmax(260px, 1fr));
@@ -76,17 +91,17 @@ const ItemStyles = styled.div`
   }
 
   .mobile-card {
-    background: #fff;
-    border-radius: 14px;
+    background: #ffffff;
+    border-radius: 16px;
     padding: 16px 18px;
-    box-shadow: 0 3px 10px rgba(0, 0, 0, 0.06);
+    box-shadow: 0 6px 16px rgba(0, 0, 0, 0.08);
     transition: all 0.25s ease-in-out;
     border: 1px solid #f0f0f0;
     position: relative;
 
     &:hover {
-      transform: translateY(-2px);
-      box-shadow: 0 6px 14px rgba(0, 0, 0, 0.1);
+      transform: translateY(-3px);
+      box-shadow: 0 10px 24px rgba(0, 0, 0, 0.12);
     }
 
     .mobile-header {
@@ -98,17 +113,17 @@ const ItemStyles = styled.div`
       h4 {
         margin: 0;
         font-size: 16px;
-        font-weight: 600;
-        color: #1f1f1f;
+        font-weight: 700;
+        color: #111827;
       }
 
       .dropdown-btn {
-        color: #555;
+        color: #6b7280;
       }
     }
 
     .brand {
-      color: #777;
+      color: #6b7280;
       font-size: 13px;
       margin-bottom: 8px;
     }
@@ -118,10 +133,10 @@ const ItemStyles = styled.div`
       justify-content: space-between;
       font-size: 14px;
       margin-bottom: 4px;
-      color: #555;
+      color: #4b5563;
 
       strong {
-        color: #000;
+        color: #111827;
       }
     }
 
@@ -131,18 +146,19 @@ const ItemStyles = styled.div`
       margin-top: 8px;
 
       .in {
-        color: #52c41a;
-        font-weight: 600;
+        color: #22c55e;
+        font-weight: 700;
       }
+
       .out {
-        color: #ff4d4f;
-        font-weight: 600;
+        color: #ef4444;
+        font-weight: 700;
       }
     }
 
     .price {
-      font-weight: 600;
-      color: #1677ff;
+      font-weight: 700;
+      color: #2563eb;
       font-size: 15px;
       margin-top: 6px;
     }

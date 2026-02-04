@@ -21,14 +21,15 @@ const Sidebar = () => {
 
   // ✅ Safe identity parsing
   const identity = localStorage.getItem("identity");
-  const role = identity ? Number(JSON.parse(identity)?.usertype) : null;
+  const parsedIdentity = identity ? JSON.parse(identity) : null;
+  const role = parsedIdentity ? Number(parsedIdentity.usertype) : null;
 
   const handleLogout = () => {
     messageApi
       .success({
         content: "Logout successful!",
         key: "logout-success",
-        duration: 3,
+        duration: 2,
       })
       .then(() => {
         localStorage.removeItem("token");
@@ -42,7 +43,7 @@ const Sidebar = () => {
     if (e.key === "logout") handleLogout();
   };
 
-  // ✅ Base menu
+  // ✅ Main menu items
   const menuItems = [
     {
       key: "dashboard",
@@ -59,6 +60,19 @@ const Sidebar = () => {
       icon: <FileDoneOutlined />,
       label: <Link to="/portal/item">Item</Link>,
     },
+  ];
+
+  // ✅ Admin-only menu
+  if (role === 1) {
+    menuItems.push({
+      key: "user",
+      icon: <UserOutlined />,
+      label: <Link to="/portal/user-management">User Management</Link>,
+    });
+  }
+
+  // ✅ Logout item
+  const logoutItem = [
     {
       key: "logout",
       icon: <LogoutOutlined />,
@@ -66,19 +80,11 @@ const Sidebar = () => {
     },
   ];
 
-  // ✅ Admin-only menu
-  if (role === 1) {
-    menuItems.splice(menuItems.length - 1, 0, {
-      key: "user",
-      icon: <UserOutlined />,
-      label: <Link to="/portal/user-management">User Management</Link>,
-    });
-  }
-
   return (
     <>
       {contextHolder}
       <SidebarStyles $open={open}>
+        {/* MOBILE MENU BUTTON */}
         <Button
           className="menu-btn"
           type="text"
@@ -90,8 +96,9 @@ const Sidebar = () => {
           <div className="sidebar-overlay" onClick={() => setOpen(false)} />
         )}
 
-        {/* MOBILE */}
+        {/* ================= MOBILE SIDEBAR ================= */}
         <div className={`mobile-sidebar ${open ? "open" : ""}`}>
+          {/* HEADER */}
           <Flex gap={5} style={{ padding: "20px" }}>
             <Image width={60} preview={false} src={cabwadLogo} />
             <Flex vertical justify="center" style={{ color: "white" }}>
@@ -100,11 +107,18 @@ const Sidebar = () => {
             </Flex>
           </Flex>
 
+          {/* MAIN MENU */}
           <Menu mode="inline" items={menuItems} onClick={handleMenuClick} />
+
+          {/* LOGOUT AT BOTTOM */}
+          <div className="logout-wrapper">
+            <Menu mode="inline" items={logoutItem} onClick={handleMenuClick} />
+          </div>
         </div>
 
-        {/* DESKTOP */}
+        {/* ================= DESKTOP SIDEBAR ================= */}
         <div className="desktop-sidebar">
+          {/* HEADER */}
           <Flex gap={5} style={{ padding: "20px" }}>
             <Image width={60} preview={false} src={cabwadLogo} />
             <Flex vertical justify="center">
@@ -113,7 +127,13 @@ const Sidebar = () => {
             </Flex>
           </Flex>
 
+          {/* MAIN MENU */}
           <Menu mode="inline" items={menuItems} onClick={handleMenuClick} />
+
+          {/* LOGOUT AT BOTTOM */}
+          <div className="logout-wrapper">
+            <Menu mode="inline" items={logoutItem} onClick={handleMenuClick} />
+          </div>
         </div>
       </SidebarStyles>
     </>
