@@ -13,6 +13,7 @@ import {
   Checkbox,
   Spin,
   Input,
+  InputNumber,
 } from "antd";
 import ExcelJS from "exceljs";
 import { saveAs } from "file-saver";
@@ -24,6 +25,7 @@ import { Html5Qrcode, Html5QrcodeScannerState } from "html5-qrcode";
 import {
   useAddStocksMutation,
   useGetStocksQuery,
+  useGetStocksSortedByControlNumberQuery,
 } from "../../services/stockApi";
 import { formatAmount } from "../../utils/formatAmount";
 
@@ -36,7 +38,6 @@ const { useBreakpoint } = Grid;
 const STATUS_OPTIONS = [
   { label: "Stock-In", value: "stock-in" },
   { label: "Stock-Out", value: "stock-out" },
-  { label: "Return", value: "return" },
 ];
 
 const Mris = () => {
@@ -45,9 +46,11 @@ const Mris = () => {
     data: fetchStocksSuccess,
     isLoading: fetchStocksLoading,
     isError: fetchStocksFailed,
-    refetch,
   } = useGetStocksQuery();
-  const [addStocks, { isLoading: isSubmitting }] = useAddStocksMutation();
+  const { data: fetchStocksByControlNo } =
+    useGetStocksSortedByControlNumberQuery();
+
+  console.log("fetchStocksSuccess", fetchStocksSuccess);
 
   const [filter, setFilter] = useState("all");
   const [isModalOpen, setIsModalOpen] = useState(false);
@@ -57,146 +60,92 @@ const Mris = () => {
 
   const screens = useBreakpoint();
 
-  const [isQRModalOpen, setIsQRModalOpen] = useState(false);
-  const [qrScanner, setQrScanner] = useState(null);
-
-  const [qrStocks, setQrStocks] = useState([]);
-  const [isPreviewModalOpen, setIsPreviewModalOpen] = useState(false);
-
   const [controlNoInput, setControlNoInput] = useState("");
 
-  useEffect(() => {
-    if (!isQRModalOpen) return;
+  const [selectedGroup, setSelectedGroup] = useState(null);
+  const [isStocksModalOpen, setIsStocksModalOpen] = useState(false);
 
-    let scanner;
+  const openStocksModal = (group) => {
+    setSelectedGroup(group);
+    setIsStocksModalOpen(true);
+  };
 
-    const timeout = setTimeout(async () => {
-      const qrElement = document.getElementById("qr-reader");
-      if (!qrElement) {
-        messageApi.error("QR reader element not found");
-        return;
-      }
-
-      scanner = new Html5Qrcode("qr-reader");
-      setQrScanner(scanner);
-
-      try {
-        await scanner.start(
-          { facingMode: "environment" },
-          { fps: 10, qrbox: 250 },
-          (decodedText) => {
-            handleQrResult(decodedText);
-            safeStopScanner(scanner);
-            setIsQRModalOpen(false);
-          },
-        );
-      } catch {
-        messageApi.error("Camera access denied or unavailable");
-      }
-    }, 300);
-
-    return () => {
-      clearTimeout(timeout);
-      safeStopScanner(scanner);
-    };
-  }, [isQRModalOpen, messageApi]);
-
-  const safeStopScanner = async (scanner) => {
-    if (!scanner) return;
-
-    try {
-      const state = scanner.getState();
-      if (
-        state === Html5QrcodeScannerState.SCANNING ||
-        state === Html5QrcodeScannerState.PAUSED
-      ) {
-        await scanner.stop();
-      }
-    } catch {
-      // swallow safely
-    }
+  const closeStocksModal = () => {
+    setSelectedGroup(null);
+    setIsStocksModalOpen(false);
   };
 
   const columns = [
-    { title: "Control Number", dataIndex: "control_no", key: "control_no" },
-    { title: "Item Name", dataIndex: "description", key: "description" },
-    { title: "Size", dataIndex: "size", key: "size" },
-    { title: "Quantity", dataIndex: "quantity", key: "quantity" },
     {
-      title: "Total Amount",
-      dataIndex: "total_price",
-      key: "total_price",
-      render: (value) => `₱${formatAmount(value)}`,
+      title: "Control Number",
+      dataIndex: "control_no",
+      render: (_, record) => (
+        <Button type="link" onClick={() => openStocksModal(record)}>
+          {record.control_no}
+        </Button>
+      ),
     },
     {
-      title: "Date",
+      title: "Date / Time",
       dataIndex: "createdAt",
-      key: "createdAt",
-      render: (value) => {
-        const date = dayjs(value);
-        return (
-          <>
-            <div>{date.format("MMMM D, YYYY")}</div>
-            <div style={{ fontSize: "12px", opacity: 0.6 }}>
-              {date.format("hh:mm A")}
-            </div>
-          </>
-        );
-      },
+      render: (v) => dayjs(v).format("MM/DD/YYYY"),
     },
     {
-      title: "Request Type",
-      dataIndex: "transaction_type",
-      key: "transaction_type",
-      render: (type) => {
-        const typeMap = {
-          1: { label: "STOCK-IN", color: "green" },
-          2: { label: "STOCK-OUT", color: "red" },
-          3: { label: "RETURN", color: "blue" },
-        };
-
-        const { label, color } = typeMap[type] || {
-          label: "UNKNOWN",
-          color: "gray",
-        };
-
-        return <span style={{ fontWeight: 600, color }}>{label}</span>;
-      },
+      title: "Name",
+      dataIndex: "createdby",
     },
   ];
 
-  const qrColumns = [
+  const stockColumns = [
     {
       title: "Item Name",
       dataIndex: "name",
     },
     {
       title: "Price",
-      dataIndex: "price",
-      render: (v) => `₱${v.toLocaleString()}`,
+      key: "total_price",
+      render: (_, record) => {
+        const total = (record.price || 0) * (record.quantity || 0);
+        return `₱${formatAmount(total)}`;
+      },
+    },
+    {
+      title: "Type",
+      dataIndex: "transaction_type",
+      render: (t) => ({ 1: "STOCK-IN", 2: "STOCK-OUT", 3: "RETURN" })[t],
     },
     {
       title: "Quantity",
       dataIndex: "quantity",
     },
     {
-      title: "Type",
-      dataIndex: "transaction_type",
-      render: (type) => ({ 1: "STOCK-IN", 2: "STOCK-OUT", 3: "RETURN" })[type],
-    },
-    {
-      title: "Action",
-      render: (_, __, index) => (
-        <Button
-          danger
-          size="small"
-          onClick={() =>
-            setQrStocks((prev) => prev.filter((_, i) => i !== index))
-          }
-        >
-          Remove
-        </Button>
-      ),
+      title: "Return",
+      render: (_, record) => {
+        const isStockOut = record.transaction_type === 2;
+
+        if (!isStockOut) {
+          return <span style={{ opacity: 0.5 }}>—</span>;
+        }
+
+        return (
+          <Space>
+            <InputNumber
+              min={0}
+              max={record.quantity}
+              value={record.returnQty || 0}
+              onChange={(value) => record.onReturnChange?.(record, value)}
+              style={{ width: 90 }}
+            />
+            <Button
+              size="small"
+              type="primary"
+              onClick={() => handleUpdateStock(record)}
+            >
+              Update
+            </Button>
+          </Space>
+        );
+      },
     },
   ];
 
@@ -215,7 +164,6 @@ const Mris = () => {
   }, [fetchStocksSuccess?.stocks, filter]);
 
   const handleOpenModal = () => setIsModalOpen(true);
-  const handleCloseModal = () => setIsModalOpen(false);
 
   const handleDownload = async () => {
     try {
@@ -256,12 +204,10 @@ const Mris = () => {
         return;
       }
 
-      // 🔹 FILTER BY TRANSACTION TYPE
       if (downloadFilter && downloadFilter.length) {
         data = data.filter((d) => downloadFilter.includes(d.type));
       }
 
-      // 🔹 FILTER BY DATE
       if (startDate) {
         data = data.filter((d) =>
           dayjs(d.createdAt).isSameOrAfter(startDate, "day"),
@@ -346,42 +292,6 @@ const Mris = () => {
     }
   };
 
-  const handleQrResult = (decodedText) => {
-    try {
-      const parsed = JSON.parse(decodedText);
-
-      if (!Array.isArray(parsed.stocks)) {
-        throw new Error("Invalid QR format");
-      }
-
-      setQrStocks(parsed.stocks);
-      setIsPreviewModalOpen(true);
-      message.success("QR data loaded successfully");
-    } catch (err) {
-      message.error("Invalid QR code data");
-      console.log(err);
-    }
-  };
-
-  const handleSubmitQrStocks = async () => {
-    if (qrStocks.length === 0) {
-      message.warning("No items to submit");
-      return;
-    }
-
-    try {
-      await addStocks({ stocks: qrStocks }).unwrap();
-      message.success("Stocks successfully submitted");
-
-      setQrStocks([]);
-      setIsPreviewModalOpen(false);
-      refetch();
-    } catch (err) {
-      console.error(err);
-      message.error("Failed to submit stocks");
-    }
-  };
-
   if (fetchStocksLoading)
     return (
       <Spin tip="Loading...">
@@ -414,34 +324,6 @@ const Mris = () => {
             <Button type="primary" onClick={handleOpenModal}>
               Download Record
             </Button>
-
-            {/* Filter Group */}
-            <Space.Compact>
-              <Button
-                type={filter === "all" ? "primary" : "default"}
-                onClick={() => setFilter("all")}
-              >
-                All
-              </Button>
-              <Button
-                type={filter === "stock-in" ? "primary" : "default"}
-                onClick={() => setFilter("stock-in")}
-              >
-                Stock-In
-              </Button>
-              <Button
-                type={filter === "stock-out" ? "primary" : "default"}
-                onClick={() => setFilter("stock-out")}
-              >
-                Stock-Out
-              </Button>
-              <Button
-                type={filter === "return" ? "primary" : "default"}
-                onClick={() => setFilter("return")}
-              >
-                Return
-              </Button>
-            </Space.Compact>
           </Space>
         </Col>
       </Row>
@@ -449,7 +331,7 @@ const Mris = () => {
       {screens.md ? (
         <Table
           columns={columns}
-          dataSource={filteredData}
+          dataSource={fetchStocksByControlNo.data}
           rowKey={(record) => record.id}
           pagination={{ pageSize: 10 }}
           bordered
@@ -554,73 +436,20 @@ const Mris = () => {
           />
         </Space>
       </Modal>
-
       <Modal
-        title="Scan QR Code"
-        open={isQRModalOpen}
-        onCancel={async () => {
-          await safeStopScanner(qrScanner);
-          setIsQRModalOpen(false);
-        }}
+        open={isStocksModalOpen}
+        onCancel={closeStocksModal}
+        title={`Control No: ${selectedGroup?.control_no}`}
+        width={800}
         footer={null}
         centered
-        destroyOnClose
-        afterClose={() => {
-          setQrScanner(null); // cleanup
-        }}
       >
-        <div
-          id="qr-reader"
-          style={{
-            width: "100%",
-            minHeight: 300,
-          }}
+        <Table
+          columns={stockColumns}
+          dataSource={selectedGroup?.stocks || []}
+          rowKey={(r, i) => `${r.item_id}-${i}`}
+          pagination={false}
         />
-
-        <div style={{ marginTop: 16, textAlign: "center" }}>
-          <input
-            type="file"
-            accept="image/*"
-            onChange={async (e) => {
-              const file = e.target.files?.[0];
-              if (!file || !qrScanner) return;
-
-              try {
-                await safeStopScanner(qrScanner);
-
-                const decodedText = await qrScanner.scanFile(file, true);
-                // messageApi.success(`QR Scanned: ${decodedText}`);
-                handleQrResult(decodedText);
-                setIsQRModalOpen(false);
-              } catch (err) {
-                console.error(err);
-                messageApi.error("Failed to scan QR from image.");
-              }
-            }}
-          />
-
-          <div style={{ fontSize: 12, opacity: 0.7 }}>Or upload QR image</div>
-        </div>
-      </Modal>
-      <Modal
-        title="Scanned Stock Preview"
-        open={isPreviewModalOpen}
-        onCancel={() => setIsPreviewModalOpen(false)}
-        onOk={handleSubmitQrStocks}
-        okText="Submit"
-        confirmLoading={isSubmitting}
-        width={700}
-        centered
-      >
-        <div style={{ overflowX: "auto" }}>
-          <Table
-            columns={qrColumns}
-            dataSource={qrStocks}
-            rowKey={(row, index) => `${row.item_id}-${index}`}
-            pagination={false}
-            scroll={{ x: "max-content" }}
-          />
-        </div>
       </Modal>
     </MrisStyles>
   );

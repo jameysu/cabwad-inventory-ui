@@ -8,6 +8,9 @@ export const stockApi = createApi({
     getStocks: builder.query({
       query: () => "stock/get-all",
     }),
+    getStocksSortedByControlNumber: builder.query({
+      query: () => "stock/get-all-stock-by-cn",
+    }),
     getStockById: builder.mutation({
       query: (item_id) => ({
         url: "stock/get-by-item",
@@ -46,4 +49,5 @@ export const {
   useAddStocksMutation,
   useUpdateStockMutation,
   useDeleteStockMutation,
+  useGetStocksSortedByControlNumberQuery,
 } = stockApi;

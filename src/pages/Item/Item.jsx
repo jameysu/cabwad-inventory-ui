@@ -50,6 +50,7 @@ const Item = () => {
 
   const identity = localStorage.getItem("identity");
   const parsedIdentity = identity ? JSON.parse(identity) : null;
+  const userId = parsedIdentity?.userid;
 
   const role = parsedIdentity ? Number(parsedIdentity.usertype) : null;
   const isHidden = parsedIdentity?.ishidden === true;
@@ -75,6 +76,9 @@ const Item = () => {
 
   const [isQRModalOpen, setIsQRModalOpen] = useState(false);
   const [qrScanner, setQrScanner] = useState(null);
+
+  const selectedRequestType = generateQRForm.getFieldValue("transaction_type");
+  console.log("selectedRequestType", selectedRequestType);
 
   const items = useMemo(() => {
     if (!fetchItemSuccess?.items) return [];
@@ -305,7 +309,7 @@ const Item = () => {
       ];
     });
 
-    generateQRForm.resetFields(["item", "quantity"]);
+    generateQRForm.resetFields(["item", "quantity", "transaction_type"]);
   };
 
   const handleRemoveQRItem = (index) => {
@@ -329,13 +333,20 @@ const Item = () => {
   };
 
   const handleSubmitQrStocks = async () => {
+    if (isSubmitting) return; // 🚫 prevent double submit
+
     if (qrStocks.length === 0) {
       message.warning("No items to submit");
       return;
     }
 
+    const stocksWithCreatedBy = qrStocks.map((stock) => ({
+      ...stock,
+      createdby: userId,
+    }));
+
     try {
-      await addStocks({ stocks: qrStocks }).unwrap();
+      await addStocks({ stocks: stocksWithCreatedBy }).unwrap();
       message.success("Stocks successfully submitted");
 
       setQrStocks([]);
@@ -595,6 +606,20 @@ const Item = () => {
           form={generateQRForm}
           onFinish={handleSubmitGenerateQR}
         >
+          <Form.Item name="control_no" label="Control Number">
+            <Input name="control_no" placeholder="Enter Control Number" />
+          </Form.Item>
+          <Form.Item name="transaction_type" label="Request Type">
+            <Select
+              placeholder={"Choose request"}
+              onChange={() => {
+                generateQRForm.setFieldsValue({ item: undefined });
+              }}
+            >
+              <Option value={1}>Stock In</Option>
+              <Option value={2}>Stock Out</Option>
+            </Select>
+          </Form.Item>
           <Form.Item name="item" label="Item">
             <Select
               showSearch
@@ -607,13 +632,23 @@ const Item = () => {
                   .includes(input.toLowerCase())
               }
             >
-              {filteredItems.map((item) => {
-                return (
+              {filteredItems
+                .filter((item) => {
+                  // If Stock Out → hide zero quantity items
+                  if (selectedRequestType === 2) {
+                    console.log(
+                      "Number(item.quantity) > 1",
+                      Number(item.quantity) > 1,
+                    );
+                    return Number(item.quantity) > 1;
+                  }
+                  return true; // Stock In → show all
+                })
+                .map((item) => (
                   <Option value={item.key} key={item.key}>
                     {`${item.brand} ${item.item} ${item.size}`}
                   </Option>
-                );
-              })}
+                ))}
             </Select>
           </Form.Item>
           <Form.Item
@@ -631,13 +666,6 @@ const Item = () => {
             ]}
           >
             <Input type="number" placeholder="Enter quantity" />
-          </Form.Item>
-          <Form.Item name="transaction_type" label="Request Type">
-            <Select placeholder={"Choose request"}>
-              <Option value={1}>Stock In</Option>
-              <Option value={2}>Stock Out</Option>
-              <Option value={3}>Return</Option>
-            </Select>
           </Form.Item>
           <Button type="dashed" block onClick={handleAddQRItem}>
             Add Item
@@ -666,9 +694,6 @@ const Item = () => {
               )}
             />
           )}
-          <Form.Item name="control_no" label="Control Number">
-            <Input name="control_no" placeholder="Enter Control Number" />
-          </Form.Item>
         </Form>
       </Modal>
       <Modal

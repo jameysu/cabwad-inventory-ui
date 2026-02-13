@@ -11,26 +11,24 @@ import {
   message,
   Avatar,
   Popconfirm,
+  Typography,
 } from "antd";
 import { Grid } from "antd";
 import {
   useGetUsersQuery,
   useLockUnlockAllUsersMutation,
   useLockUnlockUserMutation,
+  useDeleteUserMutation,
 } from "../../services/authApi";
 import UserModal from "./UserModal";
 import { UserOutlined } from "@ant-design/icons";
 
 const { Search } = Input;
 const { useBreakpoint } = Grid;
+const { Text } = Typography;
 
 const UserManagement = () => {
-  const {
-    data: getUserSuccess,
-    isLoading: getUsersLoading,
-    isError: getUsersFailed,
-    refetch,
-  } = useGetUsersQuery();
+  const { data, isLoading, isError } = useGetUsersQuery();
 
   const [lockUnlockAllUsers, { isLoading: isLockingAll }] =
     useLockUnlockAllUsersMutation();
@@ -38,32 +36,18 @@ const UserManagement = () => {
   const [lockUnlockUser, { isLoading: isLockingUser }] =
     useLockUnlockUserMutation();
 
+  const [deleteUser, { isLoading: isDeleting }] = useDeleteUserMutation();
+
   const [searchText, setSearchText] = useState("");
   const [openModal, setOpenModal] = useState(false);
   const [selectedUser, setSelectedUser] = useState(null);
   const screens = useBreakpoint();
 
-  const handleAddUser = () => {
-    setSelectedUser(null);
-    setOpenModal(true);
-  };
-
-  const handleUpdate = (record) => {
-    setSelectedUser(record);
-    console.log("record", record);
-    setOpenModal(true);
-  };
-
-  const handleDelete = (record) => {
-    console.log("Delete user:", record);
-    message.success(`User "${record.username}" deleted successfully`);
-  };
-
-  const handleSearch = (value) => setSearchText(value.toLowerCase());
+  const identityJson = JSON.parse(localStorage.getItem("identity"));
 
   const users = useMemo(() => {
-    if (getUserSuccess?.success && Array.isArray(getUserSuccess.users)) {
-      return getUserSuccess.users.map((user) => ({
+    if (data?.success && Array.isArray(data.users)) {
+      return data.users.map((user) => ({
         key: user.id,
         username: user.username,
         email: user.email,
@@ -74,7 +58,7 @@ const UserManagement = () => {
       }));
     }
     return [];
-  }, [getUserSuccess]);
+  }, [data]);
 
   const filteredData = users.filter(
     (item) =>
@@ -83,29 +67,34 @@ const UserManagement = () => {
       item.usertypename.toLowerCase().includes(searchText),
   );
 
+  const handleDelete = async (record) => {
+    try {
+      await deleteUser({
+        userid: record.key,
+        currentuserid: identityJson.userid,
+      }).unwrap();
+
+      message.success(`User "${record.username}" deleted successfully`);
+    } catch (error) {
+      message.error(error?.data?.message || "Failed to delete user");
+    }
+  };
+
   const handleLockUnlockAll = async (isLockOrUnlock) => {
     try {
-      const identity = localStorage.getItem("identity");
-      const identityJson = JSON.parse(identity);
-      console.log(identityJson);
-
       await lockUnlockAllUsers({
         currentuserid: identityJson.userid,
         isLockOrUnlock,
       }).unwrap();
 
       message.success("User lock state updated successfully");
-      refetch();
     } catch (error) {
-      message.error(error?.data?.message || "Failed to lock/unlock all users");
+      message.error(error?.data?.message || "Failed to update users");
     }
   };
 
   const handleLockUnlockUser = async (record) => {
     try {
-      const identity = localStorage.getItem("identity");
-      const identityJson = JSON.parse(identity);
-      console.log(record, identityJson);
       await lockUnlockUser({
         userid: record.key,
         currentuserid: identityJson.userid,
@@ -116,81 +105,86 @@ const UserManagement = () => {
           record.ishidden ? "unlocked" : "locked"
         } successfully`,
       );
-
-      refetch();
     } catch (error) {
-      message.error(error?.data?.message || "Failed to update user status");
+      message.error(error?.data?.message || "Failed to update user");
     }
   };
 
   const columns = [
-    { title: "Username", dataIndex: "username", key: "username" },
-    { title: "Email", dataIndex: "email", key: "email" },
-    { title: "User Type", dataIndex: "usertypename", key: "usertypename" },
+    { title: "Username", dataIndex: "username" },
+    { title: "Email", dataIndex: "email" },
+    { title: "User Type", dataIndex: "usertypename" },
     {
       title: "Status",
       dataIndex: "ishidden",
-      key: "ishidden",
       render: (_, record) => (
-        <span
-          style={{
-            color: record.ishidden ? "#cf1322" : "#389e0d",
-            fontWeight: 500,
-          }}
-        >
+        <Text type={record.ishidden ? "danger" : "success"}>
           {record.ishidden ? "Locked" : "Unlocked"}
-        </span>
+        </Text>
       ),
     },
     {
       title: "Actions",
-      key: "actions",
       render: (_, record) => (
         <Space>
-          <Button type="primary" onClick={() => handleUpdate(record)}>
+          <Button
+            type="primary"
+            onClick={() => {
+              setSelectedUser(record);
+              setOpenModal(true);
+            }}
+          >
             Update
           </Button>
 
           <Popconfirm
-            title="Are you sure you want to delete this user?"
+            title="Delete this user?"
             description="This action cannot be undone."
-            okText="Yes, delete"
+            okText="Yes"
             cancelText="Cancel"
-            okButtonProps={{ danger: true }}
+            okButtonProps={{ danger: true, loading: isDeleting }}
             onConfirm={() => handleDelete(record)}
           >
-            <Button danger>Delete</Button>
+            <Button danger loading={isDeleting}>
+              Delete
+            </Button>
           </Popconfirm>
 
-          <Button type="primary" onClick={() => handleLockUnlockUser(record)}>
-            {record.ishidden ? "Unlock User" : "Lock User"}
+          <Button
+            type="primary"
+            loading={isLockingUser}
+            onClick={() => handleLockUnlockUser(record)}
+          >
+            {record.ishidden ? "Unlock" : "Lock"}
           </Button>
         </Space>
       ),
     },
   ];
 
-  if (getUsersLoading)
+  if (isLoading)
     return (
       <Spin tip="Loading...">
         <div style={{ height: "80vh" }} />
       </Spin>
     );
-  if (getUsersFailed) return <Text type="danger">Failed to load users.</Text>;
+
+  if (isError) return <Text type="danger">Failed to load users.</Text>;
 
   return (
     <UserManagementStyled>
-      <Flex className="header-actions" gap={10}>
+      <Flex gap={10} className="header-actions">
         <Search
           placeholder="Search users"
-          onSearch={handleSearch}
-          onChange={(e) => handleSearch(e.target.value)}
           allowClear
-          style={{ width: "250px" }}
+          onChange={(e) => setSearchText(e.target.value.toLowerCase())}
+          style={{ width: 250 }}
         />
-        <Button type="primary" onClick={handleAddUser}>
+
+        <Button type="primary" onClick={() => setOpenModal(true)}>
           Add User
         </Button>
+
         <Button
           type="primary"
           loading={isLockingAll}
@@ -198,6 +192,7 @@ const UserManagement = () => {
         >
           Lock Users
         </Button>
+
         <Button
           type="primary"
           loading={isLockingAll}
@@ -208,67 +203,24 @@ const UserManagement = () => {
       </Flex>
 
       {screens.md ? (
-        <Table dataSource={filteredData} columns={columns} pagination={false} />
+        <Table columns={columns} dataSource={filteredData} />
       ) : (
         <Flex vertical gap={16}>
           {filteredData.map((user) => (
-            <Card key={user.key} size="small" className="user-card">
-              <Flex align="center" gap={12}>
+            <Card key={user.key}>
+              <Flex gap={12}>
                 <Avatar icon={<UserOutlined />} />
                 <div>
-                  <p className="username">{user.username}</p>
-                  <p className="detail">
-                    <strong>Email: </strong> {user.email}
+                  <p>
+                    <strong>{user.username}</strong>
                   </p>
-                  <p className="detail">
-                    <strong>User Type: </strong>
-                    {user.usertypename}
-                  </p>
-                  <p className="detail">
-                    <p className="detail">
-                      <strong>Status: </strong>{" "}
-                      <span
-                        style={{
-                          color: user.ishidden ? "#cf1322" : "#389e0d",
-                          fontWeight: 500,
-                        }}
-                      >
-                        {user.ishidden ? "Locked" : "Unlocked"}
-                      </span>
-                    </p>
-                  </p>
+                  <p>{user.email}</p>
+                  <p>{user.usertypename}</p>
+                  <Text type={user.ishidden ? "danger" : "success"}>
+                    {user.ishidden ? "Locked" : "Unlocked"}
+                  </Text>
                 </div>
               </Flex>
-              <div className="divider" />
-              <div className="actions">
-                <Button
-                  type="primary"
-                  size="small"
-                  onClick={() => handleUpdate(user)}
-                >
-                  Update
-                </Button>
-                <Popconfirm
-                  title="Are you sure you want to delete this user?"
-                  description="This action cannot be undone."
-                  okText="Yes, delete"
-                  cancelText="Cancel"
-                  okButtonProps={{ danger: true }}
-                  onConfirm={() => handleDelete(user)}
-                >
-                  <Button danger size="small">
-                    Delete
-                  </Button>
-                </Popconfirm>
-                <Button
-                  type="primary"
-                  size="small"
-                  loading={isLockingUser}
-                  onClick={() => handleLockUnlockUser(user)}
-                >
-                  {user.ishidden ? "Unlock User" : "Lock User"}
-                </Button>
-              </div>
             </Card>
           ))}
         </Flex>
@@ -276,9 +228,8 @@ const UserManagement = () => {
 
       <UserModal
         open={openModal}
-        onCancel={() => setOpenModal(false)}
         selectedUser={selectedUser}
-        refetch={refetch}
+        onCancel={() => setOpenModal(false)}
       />
     </UserManagementStyled>
   );

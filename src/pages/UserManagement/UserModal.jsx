@@ -7,7 +7,7 @@ import {
 
 const { Option } = Select;
 
-const UserModal = ({ open, onCancel, selectedUser, refetch }) => {
+const UserModal = ({ open, onCancel, selectedUser }) => {
   const [form] = Form.useForm();
   const [addUser, { isLoading: adding }] = useAddUserMutation();
   const [updateUser, { isLoading: updating }] = useUpdateUserMutation();
@@ -34,7 +34,7 @@ const UserModal = ({ open, onCancel, selectedUser, refetch }) => {
       if (isEdit) {
         const data = {
           userid: selectedUser.key,
-          ...values, // ✅ includes selected usertype
+          ...values,
         };
 
         await updateUser(data).unwrap();
@@ -43,11 +43,10 @@ const UserModal = ({ open, onCancel, selectedUser, refetch }) => {
         await addUser(values).unwrap();
         message.success("User added successfully!");
       }
-
-      refetch();
       onCancel();
       form.resetFields();
     } catch (error) {
+      console.log(error);
       message.error(error?.data?.message || "Something went wrong!");
     }
   };
@@ -99,7 +98,7 @@ const UserModal = ({ open, onCancel, selectedUser, refetch }) => {
           rules={[{ required: true, message: "Please select user type" }]}
           style={{ marginBottom: 5 }}
         >
-          <Select placeholder="Select user type">
+          <Select disabled={isEdit} placeholder="Select user type">
             <Option value="1">ADMIN</Option>
             <Option value="2">ENGINEER</Option>
             <Option value="3">INVENTORY</Option>
