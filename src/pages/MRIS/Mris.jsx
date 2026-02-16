@@ -26,6 +26,7 @@ import {
   useAddStocksMutation,
   useGetStocksQuery,
   useGetStocksSortedByControlNumberQuery,
+  useReturnStockMutation,
 } from "../../services/stockApi";
 import { formatAmount } from "../../utils/formatAmount";
 
@@ -50,6 +51,8 @@ const Mris = () => {
   const { data: fetchStocksByControlNo } =
     useGetStocksSortedByControlNumberQuery();
 
+  const [returnStock, { isLoading: returnLoading }] = useReturnStockMutation();
+
   console.log("fetchStocksSuccess", fetchStocksSuccess);
 
   const [filter, setFilter] = useState("all");
@@ -57,23 +60,87 @@ const Mris = () => {
   const [downloadFilter, setDownloadFilter] = useState([]);
   const [startDate, setStartDate] = useState(null);
   const [endDate, setEndDate] = useState(null);
+  const [returnValues, setReturnValues] = useState({});
 
   const screens = useBreakpoint();
 
   const [controlNoInput, setControlNoInput] = useState("");
 
-  const [selectedGroup, setSelectedGroup] = useState(null);
+  const [selectedControlNo, setSelectedControlNo] = useState(null);
+
   const [isStocksModalOpen, setIsStocksModalOpen] = useState(false);
+  const [controlNoSearch, setControlNoSearch] = useState("");
 
   const openStocksModal = (group) => {
-    setSelectedGroup(group);
+    setReturnValues({});
+    setSelectedControlNo(group.control_no);
     setIsStocksModalOpen(true);
   };
 
   const closeStocksModal = () => {
-    setSelectedGroup(null);
+    setSelectedControlNo(null);
     setIsStocksModalOpen(false);
   };
+
+  const selectedGroup = useMemo(() => {
+    if (!selectedControlNo) return null;
+
+    return fetchStocksByControlNo?.data?.find(
+      (g) => g.control_no === selectedControlNo,
+    );
+  }, [fetchStocksByControlNo?.data, selectedControlNo]);
+
+  const handleReturnChange = (record, value) => {
+    setReturnValues((prev) => ({
+      ...prev,
+      [record.id]: value, // ✅ FIXED (was item_id)
+    }));
+  };
+
+  const handleReturnStock = async (record) => {
+    const qty = returnValues[record.id]; // ✅ FIXED
+
+    if (!qty || qty <= 0) {
+      messageApi.warning("Please enter a valid return quantity");
+      return;
+    }
+
+    try {
+      await returnStock({
+        stock_id: record.id,
+        quantity: qty,
+        createdby: 1, // replace with logged user id
+      }).unwrap();
+
+      messageApi.success("Stock returned successfully");
+
+      // clear only that row input
+      setReturnValues((prev) => ({
+        ...prev,
+        [record.id]: null,
+      }));
+    } catch (err) {
+      messageApi.error(err?.data?.message || "Return failed");
+    }
+  };
+
+  const filteredControlGroups = useMemo(() => {
+    if (!controlNoSearch) return fetchStocksByControlNo?.data || [];
+
+    const keyword = controlNoSearch.trim().toLowerCase();
+
+    return (fetchStocksByControlNo?.data || []).filter((item) => {
+      const controlNo = item.control_no?.toLowerCase() || "";
+
+      // support BOTH formats
+      const createdBy =
+        item.createdby?.toLowerCase() ||
+        item.creator?.username?.toLowerCase() ||
+        "";
+
+      return controlNo.includes(keyword) || createdBy.includes(keyword);
+    });
+  }, [fetchStocksByControlNo?.data, controlNoSearch]);
 
   const columns = [
     {
@@ -84,9 +151,10 @@ const Mris = () => {
           {record.control_no}
         </Button>
       ),
+      width: 300,
     },
     {
-      title: "Date / Time",
+      title: "Date",
       dataIndex: "createdAt",
       render: (v) => dayjs(v).format("MM/DD/YYYY"),
     },
@@ -119,29 +187,46 @@ const Mris = () => {
       dataIndex: "quantity",
     },
     {
+      title: "Return Quantity",
+      dataIndex: "return_quantity",
+    },
+    {
       title: "Return",
       render: (_, record) => {
         const isStockOut = record.transaction_type === 2;
+        const isFullyReturned =
+          (record.return_quantity || 0) >= record.quantity;
 
+        // Not stock-out → no return
         if (!isStockOut) {
           return <span style={{ opacity: 0.5 }}>—</span>;
         }
 
+        // Fully returned → hide button/input
+        if (isFullyReturned) {
+          return (
+            <Text type="secondary" style={{ fontSize: 12 }}>
+              Fully Returned
+            </Text>
+          );
+        }
+
+        // Can still return
         return (
           <Space>
             <InputNumber
-              min={0}
-              max={record.quantity}
-              value={record.returnQty || 0}
-              onChange={(value) => record.onReturnChange?.(record, value)}
+              min={1}
+              max={record.quantity - (record.return_quantity || 0)}
+              value={returnValues[record.id] || null}
+              onChange={(value) => handleReturnChange(record, value)}
               style={{ width: 90 }}
             />
             <Button
               size="small"
               type="primary"
-              onClick={() => handleUpdateStock(record)}
+              onClick={() => handleReturnStock(record)}
             >
-              Update
+              Return
             </Button>
           </Space>
         );
@@ -176,44 +261,37 @@ const Mris = () => {
         3: "return",
       };
 
-      let data =
-        (fetchStocksSuccess &&
-          fetchStocksSuccess.stocks &&
-          fetchStocksSuccess.stocks
-            .filter((s) => {
-              // With control number → exact match
-              if (controlNo) {
-                return s.control_no === controlNo;
-              }
+      // Start with ALL stocks
+      let data = (fetchStocksSuccess?.stocks || []).map((s) => ({
+        ...s,
+        type: transactionTypeMap[s.transaction_type],
+      }));
 
-              // Without control number → include null or empty
-              return s.control_no === null || s.control_no === "";
-            })
-            .map((s) => ({
-              ...s,
-              type: transactionTypeMap[s.transaction_type],
-            }))) ||
-        [];
+      // Filter by Control Number (if provided)
+      if (controlNo) {
+        data = data.filter((s) => s.control_no === controlNo);
 
-      if (!data.length) {
-        messageApi.error(
-          controlNo
-            ? `No stocks found under control number "${controlNo}"`
-            : "No stocks found without a control number",
-        );
-        return;
+        if (!data.length) {
+          messageApi.error(
+            `No stocks found under control number "${controlNo}"`,
+          );
+          return;
+        }
       }
 
-      if (downloadFilter && downloadFilter.length) {
+      // Filter by Transaction Type
+      if (downloadFilter?.length) {
         data = data.filter((d) => downloadFilter.includes(d.type));
       }
 
+      // Filter by Start Date
       if (startDate) {
         data = data.filter((d) =>
           dayjs(d.createdAt).isSameOrAfter(startDate, "day"),
         );
       }
 
+      // Filter by End Date
       if (endDate) {
         data = data.filter((d) =>
           dayjs(d.createdAt).isSameOrBefore(endDate, "day"),
@@ -225,55 +303,106 @@ const Mris = () => {
         return;
       }
 
-      // 🔹 DATE/TIME FALLBACK
       const now = dayjs();
       const dateTimeStamp = now.format("YYYYMMDD_HHmmss");
 
-      const sheetName = controlNo || `${dateTimeStamp}`;
+      const sheetName = controlNo || `ALL_${dateTimeStamp}`;
       const headerText = controlNo
         ? `CONTROL NUMBER: ${controlNo}`
-        : `CONTROL NUMBER: N/A (${now.format("MMMM D, YYYY hh:mm A")})`;
+        : `ALL RECORDS (${now.format("MMMM D, YYYY hh:mm A")})`;
 
-      // 🔹 EXCEL GENERATION
       const workbook = new ExcelJS.Workbook();
-      const ws = workbook.addWorksheet(sheetName);
+      const ws = workbook.addWorksheet("MRIS Report");
 
-      ws.mergeCells("A1:F1");
+      // ===== TITLE ROW =====
+      ws.mergeCells("A1:G1");
       ws.getCell("A1").value = headerText;
       ws.getCell("A1").font = { bold: true, size: 14 };
       ws.getCell("A1").alignment = { horizontal: "center" };
 
+      // Blank row
       ws.addRow([]);
 
-      ws.columns = [
-        { header: "Item Name", key: "item", width: 30 },
-        { header: "Size", key: "size", width: 15 },
-        { header: "Quantity", key: "quantity", width: 12 },
-        { header: "Total Amount (₱)", key: "amount", width: 18 },
-        { header: "Date", key: "date", width: 25 },
-        { header: "Type", key: "type", width: 15 },
-      ];
+      // ===== HEADER ROW (Row 3) =====
+      const headerRow = ws.addRow([
+        "Control No",
+        "Item Name",
+        "Size",
+        "Quantity",
+        "Total Amount (₱)",
+        "Date",
+        "Transaction Type",
+      ]);
 
-      ws.getRow(3).eachCell((cell) => {
+      headerRow.eachCell((cell) => {
         cell.font = { bold: true, color: { argb: "FFFFFFFF" } };
         cell.fill = {
           type: "pattern",
           pattern: "solid",
           fgColor: { argb: "FF1677FF" },
         };
-        cell.alignment = { horizontal: "center" };
+        cell.alignment = { horizontal: "center", vertical: "middle" };
+        cell.border = {
+          top: { style: "thin" },
+          left: { style: "thin" },
+          bottom: { style: "thin" },
+          right: { style: "thin" },
+        };
       });
 
+      // Set column widths
+      ws.columns = [
+        { width: 18 },
+        { width: 28 },
+        { width: 15 },
+        { width: 12 },
+        { width: 18 },
+        { width: 24 },
+        { width: 18 },
+      ];
+
+      // ===== DATA ROWS =====
+      let totalSum = 0;
+
       data.forEach((r) => {
-        ws.addRow({
-          item: r.description,
-          size: r.size,
-          quantity: r.quantity,
-          amount: r.total_price,
-          date: dayjs(r.createdAt).format("MMMM D, YYYY hh:mm A"),
-          type: r.type.toUpperCase(),
+        const row = ws.addRow([
+          r.control_no || "N/A",
+          r.description,
+          r.size,
+          r.quantity,
+          r.total_price,
+          dayjs(r.createdAt).format("MMMM D, YYYY hh:mm A"),
+          r.type.toUpperCase(),
+        ]);
+
+        totalSum += Number(r.total_price || 0);
+
+        row.getCell(5).numFmt = '"₱"#,##0.00';
+
+        row.eachCell((cell) => {
+          cell.border = {
+            top: { style: "thin" },
+            left: { style: "thin" },
+            bottom: { style: "thin" },
+            right: { style: "thin" },
+          };
         });
       });
+
+      // ===== TOTAL ROW =====
+      ws.addRow([]);
+
+      const totalRow = ws.addRow(["", "", "", "TOTAL:", totalSum, "", ""]);
+
+      totalRow.getCell(4).font = { bold: true };
+      totalRow.getCell(5).font = { bold: true };
+      totalRow.getCell(5).numFmt = '"₱"#,##0.00';
+
+      // Enable auto filter
+      ws.autoFilter = {
+        from: "A3",
+        to: `G${ws.rowCount}`,
+      };
 
       const buffer = await workbook.xlsx.writeBuffer();
 
@@ -320,7 +449,14 @@ const Mris = () => {
         {/* Actions */}
         <Col xs={24} md="auto">
           <Space wrap size="middle">
-            {/* Download Action */}
+            <Input
+              placeholder="Search Control Number or Creator"
+              value={controlNoSearch}
+              onChange={(e) => setControlNoSearch(e.target.value)}
+              allowClear
+              style={{ width: 300 }}
+            />
+
             <Button type="primary" onClick={handleOpenModal}>
               Download Record
             </Button>
@@ -331,7 +467,7 @@ const Mris = () => {
       {screens.md ? (
         <Table
           columns={columns}
-          dataSource={fetchStocksByControlNo.data}
+          dataSource={filteredControlGroups}
           rowKey={(record) => record.id}
           pagination={{ pageSize: 10 }}
           bordered
@@ -445,9 +581,10 @@ const Mris = () => {
         centered
       >
         <Table
+          key={selectedGroup?.control_no}
           columns={stockColumns}
           dataSource={selectedGroup?.stocks || []}
-          rowKey={(r, i) => `${r.item_id}-${i}`}
+          rowKey={(r) => r.id}
           pagination={false}
         />
       </Modal>

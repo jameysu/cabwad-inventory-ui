@@ -3,6 +3,9 @@ import styled from "styled-components";
 const OverviewStyle = styled.div`
   padding: 12px;
 
+  /* ===============================
+     STAT GRID
+  =============================== */
   .overview-grid {
     display: grid;
     grid-template-columns: repeat(3, 1fr);
@@ -21,9 +24,7 @@ const OverviewStyle = styled.div`
     border-radius: 14px;
     color: #fff;
     box-shadow: 0 10px 25px rgba(0, 0, 0, 0.08);
-    transition:
-      transform 0.25s ease,
-      box-shadow 0.25s ease;
+    transition: all 0.25s ease;
 
     &:hover {
       transform: translateY(-4px);
@@ -35,9 +36,6 @@ const OverviewStyle = styled.div`
       background: rgba(255, 255, 255, 0.2);
       padding: 14px;
       border-radius: 12px;
-      display: flex;
-      align-items: center;
-      justify-content: center;
     }
 
     .label {
@@ -62,6 +60,33 @@ const OverviewStyle = styled.div`
 
   .total-product {
     background: linear-gradient(135deg, #22c55e, #86efac);
+  }
+
+  /* ===============================
+     TABLE SECTION
+  =============================== */
+  .table-section {
+    margin-top: 24px;
+    display: grid;
+    grid-template-columns: repeat(2, 1fr);
+    gap: 16px;
+
+    @media (max-width: 992px) {
+      grid-template-columns: 1fr;
+    }
+  }
+
+  .table-card {
+    border-radius: 14px;
+    box-shadow: 0 8px 22px rgba(0, 0, 0, 0.06);
+
+    .ant-card-body {
+      padding: 16px;
+    }
+
+    h5 {
+      margin-bottom: 12px;
+    }
   }
 `;
 
