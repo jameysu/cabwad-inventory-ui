@@ -79,6 +79,9 @@ const Overview = () => {
       key: "item",
     },
     {
+      title: "Transaction Type",
+    },
+    {
       title: "Total Price",
       dataIndex: "total_price",
       key: "total_price",
@@ -143,10 +146,6 @@ const Overview = () => {
           </Flex>
         </Card>
       </Flex>
-
-      {/* ===============================
-          RECENT TABLES
-      =============================== */}
       <div className="table-section">
         <Card className="table-card">
           <Title level={5}>🆕 Recently Added Items</Title>

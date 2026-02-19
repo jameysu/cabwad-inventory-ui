@@ -82,20 +82,29 @@ const Item = () => {
 
   const items = useMemo(() => {
     if (!fetchItemSuccess?.items) return [];
-    return fetchItemSuccess.items.map((i) => ({
-      key: i.id,
-      item: i.description,
-      brand: i.brand,
-      category: i.category,
-      size: i.size,
-      price: i.amount,
-      quantity: i.quantity,
-      stock_in: i.stockin,
-      stock_out: i.stockout,
-      return: i.return,
-      added_by: i.added_by,
-      createdAt: i.createdAt,
-    }));
+
+    // Create a copy and sort
+    return [...fetchItemSuccess.items]
+      .sort((a, b) =>
+        // Use localeCompare for natural alphanumeric sorting (e.g., 03-395)
+        String(a.brand).localeCompare(String(b.brand), undefined, {
+          numeric: true,
+        }),
+      )
+      .map((i) => ({
+        key: i.id,
+        item: i.description,
+        brand: i.brand, // This is your Item ID
+        category: i.category,
+        size: i.size,
+        price: i.amount,
+        quantity: i.quantity,
+        stock_in: i.stockin,
+        stock_out: i.stockout,
+        return: i.return,
+        added_by: i.added_by,
+        createdAt: i.createdAt,
+      }));
   }, [fetchItemSuccess]);
 
   const filteredItems = useMemo(() => {
@@ -107,6 +116,7 @@ const Item = () => {
         .includes(searchTerm.toLowerCase()),
     );
   }, [searchTerm, items]);
+  console.log("filteredItems", filteredItems);
 
   useEffect(() => {
     const handleResize = () => setIsMobile(window.innerWidth <= 768);
@@ -247,6 +257,8 @@ const Item = () => {
       item_id: id,
       control_no,
     }));
+    console.log("qrItems", qrItems);
+    console.log("stocks", stocks);
 
     const payload = { stocks };
 
@@ -284,6 +296,7 @@ const Item = () => {
 
     setQrItems((prev) => {
       const existingIndex = prev.findIndex((item) => item.id === values.item);
+      console.log("selectedItem", selectedItem);
 
       // ✅ If item already exists → add quantity
       if (existingIndex !== -1) {
@@ -296,11 +309,12 @@ const Item = () => {
         return updated;
       }
 
+      console.log("selectedItem", selectedItem);
       // ✅ Otherwise → add new item
       return [
         ...prev,
         {
-          id: values.item,
+          id: selectedItem.key,
           name: `${selectedItem.brand} ${selectedItem.item}`,
           price: Number(selectedItem.price),
           quantity: Number(values.quantity),
@@ -359,12 +373,17 @@ const Item = () => {
   };
 
   const columns = [
+    {
+      title: "Item ID",
+      dataIndex: "brand",
+      key: "id",
+      width: 90,
+    },
     { title: "Item", dataIndex: "item", key: "item" },
-    { title: "Brand", dataIndex: "brand", key: "brand" },
     { title: "Category", dataIndex: "category", key: "category" },
     { title: "Size", dataIndex: "size", key: "size" },
     {
-      title: "Price (₱)",
+      title: "Price(₱)",
       dataIndex: "price",
       key: "price",
       render: (value) => `₱${formatAmount(value)}`,
@@ -372,7 +391,13 @@ const Item = () => {
     { title: "Stock In", dataIndex: "stock_in", key: "stock_in" },
     { title: "Stock Out", dataIndex: "stock_out", key: "stock_out" },
     { title: "Return", dataIndex: "return", key: "return" },
-    { title: "Total Quantity", dataIndex: "quantity", key: "quantity" },
+    {
+      title: "Stock Price (₱)",
+      dataIndex: "quantity",
+      key: "quantity",
+      render: (_, record) =>
+        `₱${formatAmount(Number(record.price) * Number(record.quantity))}`,
+    },
 
     ...(!isHidden && (isAdmin || isInventory)
       ? [

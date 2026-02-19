@@ -14,6 +14,7 @@ import {
   Spin,
   Input,
   InputNumber,
+  Select,
 } from "antd";
 import ExcelJS from "exceljs";
 import { saveAs } from "file-saver";
@@ -29,6 +30,7 @@ import {
   useReturnStockMutation,
 } from "../../services/stockApi";
 import { formatAmount } from "../../utils/formatAmount";
+import { useGetItemsQuery } from "../../services/itemApi";
 
 dayjs.extend(isSameOrAfter);
 dayjs.extend(isSameOrBefore);
@@ -52,8 +54,8 @@ const Mris = () => {
     useGetStocksSortedByControlNumberQuery();
 
   const [returnStock, { isLoading: returnLoading }] = useReturnStockMutation();
-
-  console.log("fetchStocksSuccess", fetchStocksSuccess);
+  const { data: fetchItemsSuccess, isLoading: fetchItemsLoading } =
+    useGetItemsQuery();
 
   const [filter, setFilter] = useState("all");
   const [isModalOpen, setIsModalOpen] = useState(false);
@@ -70,6 +72,8 @@ const Mris = () => {
 
   const [isStocksModalOpen, setIsStocksModalOpen] = useState(false);
   const [controlNoSearch, setControlNoSearch] = useState("");
+
+  const [selectedItemId, setSelectedItemId] = useState(null);
 
   const openStocksModal = (group) => {
     setReturnValues({});
@@ -97,6 +101,7 @@ const Mris = () => {
     }));
   };
 
+  console.log("selectedGroup", selectedGroup);
   const handleReturnStock = async (record) => {
     const qty = returnValues[record.id]; // ✅ FIXED
 
@@ -123,6 +128,15 @@ const Mris = () => {
       messageApi.error(err?.data?.message || "Return failed");
     }
   };
+
+  const itemOptions = useMemo(() => {
+    if (!fetchItemsSuccess?.items) return [];
+
+    return fetchItemsSuccess.items.map((item) => ({
+      label: `${item.description} ${item.size || ""}`.trim(),
+      value: item.id, // ✅ REAL ITEM ID
+    }));
+  }, [fetchItemsSuccess?.items]);
 
   const filteredControlGroups = useMemo(() => {
     if (!controlNoSearch) return fetchStocksByControlNo?.data || [];
@@ -252,46 +266,55 @@ const Mris = () => {
 
   const handleDownload = async () => {
     try {
-      const controlNo =
-        controlNoInput && controlNoInput.trim() ? controlNoInput.trim() : null;
+      // 🔹 Start with ALL stocks
+      let data = fetchStocksSuccess?.stocks || [];
 
-      const transactionTypeMap = {
-        1: "stock-in",
-        2: "stock-out",
-        3: "return",
-      };
+      if (!data.length) {
+        messageApi.error("No stocks available");
+        return;
+      }
 
-      // Start with ALL stocks
-      let data = (fetchStocksSuccess?.stocks || []).map((s) => ({
-        ...s,
-        type: transactionTypeMap[s.transaction_type],
-      }));
+      // 🔹 OPTIONAL: filter by selected item
+      let selectedItem = null;
 
-      // Filter by Control Number (if provided)
-      if (controlNo) {
-        data = data.filter((s) => s.control_no === controlNo);
+      if (selectedItemId) {
+        selectedItem = fetchItemsSuccess?.items?.find(
+          (i) => i.id === selectedItemId,
+        );
+
+        if (!selectedItem) {
+          messageApi.error("Selected item not found");
+          return;
+        }
+
+        data = data.filter((s) => s.item_id === selectedItemId);
 
         if (!data.length) {
-          messageApi.error(
-            `No stocks found under control number "${controlNo}"`,
-          );
+          messageApi.error("No stocks found for selected item");
           return;
         }
       }
 
-      // Filter by Transaction Type
+      // 🔹 Filter by transaction type
       if (downloadFilter?.length) {
-        data = data.filter((d) => downloadFilter.includes(d.type));
+        const typeMap = {
+          "stock-in": 1,
+          "stock-out": 2,
+          return: 3,
+        };
+
+        const allowedTypes = downloadFilter.map((f) => typeMap[f]);
+        data = data.filter((d) => allowedTypes.includes(d.transaction_type));
       }
 
-      // Filter by Start Date
+      // 🔹 Filter by start date
       if (startDate) {
         data = data.filter((d) =>
           dayjs(d.createdAt).isSameOrAfter(startDate, "day"),
         );
       }
 
-      // Filter by End Date
+      // 🔹 Filter by end date
       if (endDate) {
         data = data.filter((d) =>
           dayjs(d.createdAt).isSameOrBefore(endDate, "day"),
@@ -299,31 +322,42 @@ const Mris = () => {
       }
 
       if (!data.length) {
-        messageApi.error("No data matched the selected filters");
+        messageApi.error("No records matched the selected filters");
         return;
       }
+
+      // 🔹 Normalize & compute totals
+      data = data.map((s) => ({
+        ...s,
+        total_price: Number(s.price || 0) * Number(s.quantity || 0),
+      }));
 
       const now = dayjs();
       const dateTimeStamp = now.format("YYYYMMDD_HHmmss");
 
-      const sheetName = controlNo || `ALL_${dateTimeStamp}`;
-      const headerText = controlNo
-        ? `CONTROL NUMBER: ${controlNo}`
-        : `ALL RECORDS (${now.format("MMMM D, YYYY hh:mm A")})`;
+      const headerText = selectedItem
+        ? `ITEM: ${selectedItem.description} ${selectedItem.size || ""}`
+        : `ALL ITEMS (${now.format("MMMM D, YYYY hh:mm A")})`;
 
+      const fileName = selectedItem
+        ? `ITEM_${selectedItem.description
+            .replace(/\s+/g, "_")
+            .toUpperCase()}_${dateTimeStamp}.xlsx`
+        : `ALL_ITEMS_${dateTimeStamp}.xlsx`;
+
+      // ================= EXCEL CREATION =================
       const workbook = new ExcelJS.Workbook();
       const ws = workbook.addWorksheet("MRIS Report");
 
-      // ===== TITLE ROW =====
+      // 🔹 Title
       ws.mergeCells("A1:G1");
       ws.getCell("A1").value = headerText;
       ws.getCell("A1").font = { bold: true, size: 14 };
       ws.getCell("A1").alignment = { horizontal: "center" };
 
-      // Blank row
       ws.addRow([]);
 
-      // ===== HEADER ROW (Row 3) =====
+      // 🔹 Header row
       const headerRow = ws.addRow([
         "Control No",
         "Item Name",
@@ -350,10 +384,9 @@ const Mris = () => {
         };
       });
 
-      // Set column widths
       ws.columns = [
         { width: 18 },
-        { width: 28 },
+        { width: 30 },
         { width: 15 },
         { width: 12 },
         { width: 18 },
@@ -361,7 +394,7 @@ const Mris = () => {
         { width: 18 },
       ];
 
-      // ===== DATA ROWS =====
+      // 🔹 Data rows
       let totalSum = 0;
 
       data.forEach((r) => {
@@ -372,7 +405,11 @@ const Mris = () => {
           r.quantity,
           r.total_price,
           dayjs(r.createdAt).format("MMMM D, YYYY hh:mm A"),
-          r.type.toUpperCase(),
+          r.transaction_type === 1
+            ? "STOCK-IN"
+            : r.transaction_type === 2
+              ? "STOCK-OUT"
+              : "RETURN",
         ]);
 
         totalSum += Number(r.total_price || 0);
@@ -389,28 +426,26 @@ const Mris = () => {
         });
       });
 
-      // ===== TOTAL ROW =====
+      // 🔹 Total row
       ws.addRow([]);
-
       const totalRow = ws.addRow(["", "", "", "TOTAL:", totalSum, "", ""]);
-
       totalRow.getCell(4).font = { bold: true };
       totalRow.getCell(5).font = { bold: true };
       totalRow.getCell(5).numFmt = '"₱"#,##0.00';
 
-      // Enable auto filter
       ws.autoFilter = {
         from: "A3",
         to: `G${ws.rowCount}`,
       };
 
+      // 🔹 Download
       const buffer = await workbook.xlsx.writeBuffer();
 
       saveAs(
         new Blob([buffer], {
           type: "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
         }),
-        `MRIS_${sheetName}.xlsx`,
+        fileName,
       );
 
       messageApi.success("Excel exported successfully");
@@ -562,6 +597,19 @@ const Mris = () => {
             onChange={setEndDate}
             style={{ width: "100%" }}
             disabledDate={(d) => startDate && d.isBefore(startDate, "day")}
+          />
+
+          <Select
+            placeholder="Select Item (optional)"
+            value={selectedItemId ?? undefined} // 🔑 allow clear to work
+            allowClear
+            loading={fetchItemsLoading}
+            options={itemOptions}
+            style={{ width: "100%" }}
+            onChange={(value) => {
+              // value === undefined when cleared
+              setSelectedItemId(value ?? null);
+            }}
           />
 
           <Text strong>Transaction Type</Text>
