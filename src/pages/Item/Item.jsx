@@ -59,7 +59,8 @@ const Item = () => {
   const isInventory = role === 3;
 
   const [messageApi, contextHolder] = message.useMessage();
-  const [addStocks, { isLoading: isSubmitting }] = useAddStocksMutation();
+  const [addStocks, { isLoading: isSubmitting, error: isErrorAddStock }] =
+    useAddStocksMutation();
 
   const [generateQRForm] = Form.useForm();
 
@@ -367,8 +368,8 @@ const Item = () => {
       setIsPreviewModalOpen(false);
       refetch();
     } catch (err) {
-      console.error(err);
-      message.error("Failed to submit stocks");
+      console.error("error adding stock", isErrorAddStock);
+      message.error(isErrorAddStock?.data.message);
     }
   };
 
@@ -691,6 +692,9 @@ const Item = () => {
             ]}
           >
             <Input type="number" placeholder="Enter quantity" />
+          </Form.Item>
+          <Form.Item name="team_leader" label="Team Leader">
+            <Input name="team_leader" placeholder="Enter Team Leader Name" />
           </Form.Item>
           <Button type="dashed" block onClick={handleAddQRItem}>
             Add Item

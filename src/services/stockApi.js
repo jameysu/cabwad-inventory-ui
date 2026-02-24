@@ -5,13 +5,9 @@ export const stockApi = createApi({
   reducerPath: "stocksApi",
   baseQuery,
 
-  // 🔥 DEFINE TAG TYPES
   tagTypes: ["Stocks"],
 
   endpoints: (builder) => ({
-    // =======================
-    // QUERIES
-    // =======================
     getStocks: builder.query({
       query: () => "stock/get-all",
       providesTags: ["Stocks"],
@@ -31,9 +27,6 @@ export const stockApi = createApi({
       invalidatesTags: ["Stocks"],
     }),
 
-    // =======================
-    // MUTATIONS
-    // =======================
     addStocks: builder.mutation({
       query: (stocks) => ({
         url: "stock/add-bulk-stock",
@@ -67,7 +60,15 @@ export const stockApi = createApi({
         method: "POST",
         body: data,
       }),
-      invalidatesTags: ["Stocks"], // 🔥 AUTO REFRESH EVERYTHING
+      invalidatesTags: ["Stocks"],
+    }),
+    updateAccuracy: builder.mutation({
+      query: (data) => ({
+        url: "stock/update-stock-accuracy",
+        method: "PUT",
+        body: data,
+      }),
+      invalidatesTags: ["Stocks"],
     }),
   }),
 });
@@ -80,4 +81,5 @@ export const {
   useDeleteStockMutation,
   useGetStocksSortedByControlNumberQuery,
   useReturnStockMutation,
+  useUpdateAccuracyMutation,
 } = stockApi;

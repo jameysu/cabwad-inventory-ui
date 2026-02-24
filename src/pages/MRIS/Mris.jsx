@@ -15,6 +15,8 @@ import {
   Input,
   InputNumber,
   Select,
+  Popover,
+  Tag,
 } from "antd";
 import ExcelJS from "exceljs";
 import { saveAs } from "file-saver";
@@ -22,12 +24,11 @@ import dayjs from "dayjs";
 import isSameOrAfter from "dayjs/plugin/isSameOrAfter";
 import isSameOrBefore from "dayjs/plugin/isSameOrBefore";
 import MrisStyles from "./Mris.styles";
-import { Html5Qrcode, Html5QrcodeScannerState } from "html5-qrcode";
 import {
-  useAddStocksMutation,
   useGetStocksQuery,
   useGetStocksSortedByControlNumberQuery,
   useReturnStockMutation,
+  useUpdateAccuracyMutation,
 } from "../../services/stockApi";
 import { formatAmount } from "../../utils/formatAmount";
 import { useGetItemsQuery } from "../../services/itemApi";
@@ -44,6 +45,18 @@ const STATUS_OPTIONS = [
 ];
 
 const Mris = () => {
+  const identity = localStorage.getItem("identity");
+  const parsedIdentity = identity ? JSON.parse(identity) : null;
+
+  const role = parsedIdentity ? Number(parsedIdentity.usertype) : null;
+  const isHidden = parsedIdentity?.ishidden === true;
+  console.log("identity", identity, role, isHidden);
+
+  const isAdmin = role === 1;
+  const isInventory = role === 3;
+
+  const canUpdateAccuracy = !isHidden && (isAdmin || isInventory);
+
   const [messageApi, contextHolder] = message.useMessage();
   const {
     data: fetchStocksSuccess,
@@ -53,9 +66,12 @@ const Mris = () => {
   const { data: fetchStocksByControlNo } =
     useGetStocksSortedByControlNumberQuery();
 
-  const [returnStock, { isLoading: returnLoading }] = useReturnStockMutation();
+  const [returnStock] = useReturnStockMutation();
   const { data: fetchItemsSuccess, isLoading: fetchItemsLoading } =
     useGetItemsQuery();
+
+  const [updateAccuracy, { isLoading: updatingAccuracy }] =
+    useUpdateAccuracyMutation();
 
   const [filter, setFilter] = useState("all");
   const [isModalOpen, setIsModalOpen] = useState(false);
@@ -97,13 +113,12 @@ const Mris = () => {
   const handleReturnChange = (record, value) => {
     setReturnValues((prev) => ({
       ...prev,
-      [record.id]: value, // ✅ FIXED (was item_id)
+      [record.id]: value,
     }));
   };
 
-  console.log("selectedGroup", selectedGroup);
   const handleReturnStock = async (record) => {
-    const qty = returnValues[record.id]; // ✅ FIXED
+    const qty = returnValues[record.id];
 
     if (!qty || qty <= 0) {
       messageApi.warning("Please enter a valid return quantity");
@@ -114,12 +129,11 @@ const Mris = () => {
       await returnStock({
         stock_id: record.id,
         quantity: qty,
-        createdby: 1, // replace with logged user id
+        createdby: 1,
       }).unwrap();
 
       messageApi.success("Stock returned successfully");
 
-      // clear only that row input
       setReturnValues((prev) => ({
         ...prev,
         [record.id]: null,
@@ -134,7 +148,7 @@ const Mris = () => {
 
     return fetchItemsSuccess.items.map((item) => ({
       label: `${item.description} ${item.size || ""}`.trim(),
-      value: item.id, // ✅ REAL ITEM ID
+      value: item.id,
     }));
   }, [fetchItemsSuccess?.items]);
 
@@ -146,7 +160,6 @@ const Mris = () => {
     return (fetchStocksByControlNo?.data || []).filter((item) => {
       const controlNo = item.control_no?.toLowerCase() || "";
 
-      // support BOTH formats
       const createdBy =
         item.createdby?.toLowerCase() ||
         item.creator?.username?.toLowerCase() ||
@@ -155,6 +168,21 @@ const Mris = () => {
       return controlNo.includes(keyword) || createdBy.includes(keyword);
     });
   }, [fetchStocksByControlNo?.data, controlNoSearch]);
+
+  const handleAccuracyUpdate = async (control_no, is_accurate) => {
+    try {
+      await updateAccuracy({
+        control_no,
+        is_accurate,
+      }).unwrap();
+
+      messageApi.success(
+        is_accurate ? "Marked as Accurate" : "Marked as Inaccurate",
+      );
+    } catch (err) {
+      messageApi.error(err?.data?.message || "Update failed");
+    }
+  };
 
   const columns = [
     {
@@ -175,6 +203,50 @@ const Mris = () => {
     {
       title: "Name",
       dataIndex: "createdby",
+    },
+    {
+      title: "Team Leader",
+      dataIndex: "team_lead",
+      render: (v) => v || <Text type="secondary">—</Text>,
+    },
+    {
+      title: "Accuracy",
+      dataIndex: "is_accurate",
+      align: "center",
+      render: (_, record) => {
+        const isAccurate = record.is_accurate === true;
+
+        return (
+          <Popover
+            trigger="click"
+            content={
+              <Space direction="vertical">
+                <Button
+                  size="small"
+                  type="primary"
+                  onClick={() => handleAccuracyUpdate(record.control_no, true)}
+                  disabled={updatingAccuracy || !canUpdateAccuracy}
+                >
+                  Accurate
+                </Button>
+
+                <Button
+                  size="small"
+                  danger
+                  onClick={() => handleAccuracyUpdate(record.control_no, false)}
+                  disabled={updatingAccuracy || !canUpdateAccuracy}
+                >
+                  Inaccurate
+                </Button>
+              </Space>
+            }
+          >
+            <Tag color={isAccurate ? "green" : "red"}>
+              {isAccurate ? "ACCURATE" : "INACCURATE"}
+            </Tag>
+          </Popover>
+        );
+      },
     },
   ];
 
@@ -211,12 +283,10 @@ const Mris = () => {
         const isFullyReturned =
           (record.return_quantity || 0) >= record.quantity;
 
-        // Not stock-out → no return
         if (!isStockOut) {
           return <span style={{ opacity: 0.5 }}>—</span>;
         }
 
-        // Fully returned → hide button/input
         if (isFullyReturned) {
           return (
             <Text type="secondary" style={{ fontSize: 12 }}>
@@ -225,7 +295,6 @@ const Mris = () => {
           );
         }
 
-        // Can still return
         return (
           <Space>
             <InputNumber
@@ -266,7 +335,6 @@ const Mris = () => {
 
   const handleDownload = async () => {
     try {
-      // 🔹 Start with ALL stocks
       let data = fetchStocksSuccess?.stocks || [];
 
       if (!data.length) {
@@ -274,7 +342,6 @@ const Mris = () => {
         return;
       }
 
-      // 🔹 OPTIONAL: filter by selected item
       let selectedItem = null;
 
       if (selectedItemId) {
@@ -295,7 +362,6 @@ const Mris = () => {
         }
       }
 
-      // 🔹 Filter by transaction type
       if (downloadFilter?.length) {
         const typeMap = {
           "stock-in": 1,
@@ -307,14 +373,12 @@ const Mris = () => {
         data = data.filter((d) => allowedTypes.includes(d.transaction_type));
       }
 
-      // 🔹 Filter by start date
       if (startDate) {
         data = data.filter((d) =>
           dayjs(d.createdAt).isSameOrAfter(startDate, "day"),
         );
       }
 
-      // 🔹 Filter by end date
       if (endDate) {
         data = data.filter((d) =>
           dayjs(d.createdAt).isSameOrBefore(endDate, "day"),
@@ -326,7 +390,6 @@ const Mris = () => {
         return;
       }
 
-      // 🔹 Normalize & compute totals
       data = data.map((s) => ({
         ...s,
         total_price: Number(s.price || 0) * Number(s.quantity || 0),
@@ -345,11 +408,9 @@ const Mris = () => {
             .toUpperCase()}_${dateTimeStamp}.xlsx`
         : `ALL_ITEMS_${dateTimeStamp}.xlsx`;
 
-      // ================= EXCEL CREATION =================
       const workbook = new ExcelJS.Workbook();
       const ws = workbook.addWorksheet("MRIS Report");
 
-      // 🔹 Title
       ws.mergeCells("A1:G1");
       ws.getCell("A1").value = headerText;
       ws.getCell("A1").font = { bold: true, size: 14 };
@@ -357,7 +418,6 @@ const Mris = () => {
 
       ws.addRow([]);
 
-      // 🔹 Header row
       const headerRow = ws.addRow([
         "Control No",
         "Item Name",
@@ -394,7 +454,6 @@ const Mris = () => {
         { width: 18 },
       ];
 
-      // 🔹 Data rows
       let totalSum = 0;
 
       data.forEach((r) => {
@@ -426,7 +485,6 @@ const Mris = () => {
         });
       });
 
-      // 🔹 Total row
       ws.addRow([]);
       const totalRow = ws.addRow(["", "", "", "TOTAL:", totalSum, "", ""]);
       totalRow.getCell(4).font = { bold: true };
@@ -438,7 +496,6 @@ const Mris = () => {
         to: `G${ws.rowCount}`,
       };
 
-      // 🔹 Download
       const buffer = await workbook.xlsx.writeBuffer();
 
       saveAs(
@@ -474,14 +531,12 @@ const Mris = () => {
         align="middle"
         style={{ marginBottom: 16 }}
       >
-        {/* Title */}
         <Col xs={24} md="auto">
           <Title level={3} style={{ margin: 0 }}>
             Item Records
           </Title>
         </Col>
 
-        {/* Actions */}
         <Col xs={24} md="auto">
           <Space wrap size="middle">
             <Input
