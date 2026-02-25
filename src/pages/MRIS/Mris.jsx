@@ -50,7 +50,6 @@ const Mris = () => {
 
   const role = parsedIdentity ? Number(parsedIdentity.usertype) : null;
   const isHidden = parsedIdentity?.ishidden === true;
-  console.log("identity", identity, role, isHidden);
 
   const isAdmin = role === 1;
   const isInventory = role === 3;
@@ -656,13 +655,18 @@ const Mris = () => {
 
           <Select
             placeholder="Select Item (optional)"
-            value={selectedItemId ?? undefined} // 🔑 allow clear to work
+            value={selectedItemId ?? undefined}
             allowClear
             loading={fetchItemsLoading}
             options={itemOptions}
+            filterOption={(input, option) =>
+              option?.children
+                ?.toString()
+                .toLowerCase()
+                .includes(input.toLowerCase())
+            }
             style={{ width: "100%" }}
             onChange={(value) => {
-              // value === undefined when cleared
               setSelectedItemId(value ?? null);
             }}
           />

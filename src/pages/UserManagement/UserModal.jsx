@@ -46,7 +46,6 @@ const UserModal = ({ open, onCancel, selectedUser }) => {
       onCancel();
       form.resetFields();
     } catch (error) {
-      console.log(error);
       message.error(error?.data?.message || "Something went wrong!");
     }
   };

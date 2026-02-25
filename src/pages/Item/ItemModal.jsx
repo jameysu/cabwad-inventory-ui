@@ -39,7 +39,7 @@ const ItemModal = ({ open, onClose, selectedItem, refetch }) => {
 
     const hide = message.loading(
       isEditMode ? "Updating item..." : "Saving item...",
-      0
+      0,
     );
 
     try {
@@ -61,7 +61,7 @@ const ItemModal = ({ open, onClose, selectedItem, refetch }) => {
         message.error(response.message || "Operation failed");
       } else {
         message.success(
-          isEditMode ? "Item updated successfully" : "Item added successfully"
+          isEditMode ? "Item updated successfully" : "Item added successfully",
         );
         onClose();
         refetch();
@@ -72,7 +72,7 @@ const ItemModal = ({ open, onClose, selectedItem, refetch }) => {
       message.error(
         error?.data?.message ||
           error?.message ||
-          "Failed to save item. Please try again."
+          "Failed to save item. Please try again.",
       );
     }
   };
@@ -107,7 +107,7 @@ const ItemModal = ({ open, onClose, selectedItem, refetch }) => {
 
         <Form.Item
           name="brand"
-          label="Brand"
+          label="Item ID"
           rules={[{ required: true, message: "Please enter brand" }]}
           style={{ marginBottom: 0 }}
         >

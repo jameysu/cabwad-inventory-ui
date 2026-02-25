@@ -23,7 +23,6 @@ const Overview = () => {
   const stocks = stockData?.stocks ?? [];
   const items = itemData?.items ?? [];
 
-  // ✅ Total Stock In Cost (transaction_type === 1)
   const totalStockInCost = stocks.reduce((total, item) => {
     if (item.transaction_type === 1) {
       return total + Number(item.total_price || 0);
@@ -31,7 +30,6 @@ const Overview = () => {
     return total;
   }, 0);
 
-  // ✅ Total Stock Out Cost (transaction_type === 2)
   const totalStockOutCost = stocks.reduce((total, item) => {
     if (item.transaction_type === 2) {
       return total + Number(item.total_price || 0);
@@ -41,9 +39,6 @@ const Overview = () => {
 
   const totalProducts = items.length;
 
-  /* ===============================
-     RECENT DATA (TOP 5)
-  =============================== */
   const recentItems = [...items]
     .sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt))
     .slice(0, 5);
@@ -105,11 +100,11 @@ const Overview = () => {
     data: lineData,
     xField: "month",
     yField: "value",
-    seriesField: "type", // 👈 creates two lines
+    seriesField: "type",
     smooth: true,
     height: 260,
     autoFit: true,
-    color: ["#52c41a", "#ff4d4f"], // green / red
+    color: ["#52c41a", "#ff4d4f"],
     point: {
       size: 4,
     },
@@ -118,7 +113,6 @@ const Overview = () => {
     },
   };
 
-  // 🥧 Pie Chart – Accuracy
   const pieData = [
     {
       type: "Accurate",
@@ -147,9 +141,6 @@ const Overview = () => {
     },
   };
 
-  /* ===============================
-     TABLE COLUMNS
-  =============================== */
   const itemColumns = [
     {
       title: "Item Name",
@@ -202,9 +193,6 @@ const Overview = () => {
 
   return (
     <OverviewStyle>
-      {/* ===============================
-          STAT CARDS
-      =============================== */}
       <Flex className="overview-grid">
         <Card className="overview-card inventory-cost">
           <Flex align="center" gap={16}>

@@ -13,7 +13,6 @@ const Login = () => {
   const dispatch = useDispatch();
   const [login, { data: loginSuccess, error: loginFailed, isLoading }] =
     useLoginMutation();
-  console.log(loginSuccess);
 
   const [messageApi, contextHolder] = message.useMessage();
   const token = localStorage.getItem("token");

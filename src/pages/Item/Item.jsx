@@ -37,7 +37,6 @@ const Item = () => {
     isError: fetchItemFailed,
     refetch,
   } = useGetItemsQuery();
-  console.log("fetchItemSuccess", fetchItemSuccess);
 
   const [
     deleteItem,
@@ -81,15 +80,12 @@ const Item = () => {
   const [qrScanner, setQrScanner] = useState(null);
 
   const selectedRequestType = generateQRForm.getFieldValue("transaction_type");
-  console.log("selectedRequestType", selectedRequestType);
 
   const items = useMemo(() => {
     if (!fetchItemSuccess?.items) return [];
 
-    // Create a copy and sort
     return [...fetchItemSuccess.items]
       .sort((a, b) =>
-        // Use localeCompare for natural alphanumeric sorting (e.g., 03-395)
         String(a.brand).localeCompare(String(b.brand), undefined, {
           numeric: true,
         }),
@@ -97,7 +93,7 @@ const Item = () => {
       .map((i) => ({
         key: i.id,
         item: i.description,
-        brand: i.brand, // This is your Item ID
+        brand: i.brand,
         category: i.category,
         size: i.size,
         price: i.amount,
@@ -119,7 +115,6 @@ const Item = () => {
         .includes(searchTerm.toLowerCase()),
     );
   }, [searchTerm, items]);
-  console.log("filteredItems", filteredItems);
 
   useEffect(() => {
     const handleResize = () => setIsMobile(window.innerWidth <= 768);
@@ -210,7 +205,6 @@ const Item = () => {
   const handleQrResult = (decodedText) => {
     try {
       const parsed = JSON.parse(decodedText);
-      console.log("decodedText", decodedText);
 
       if (!Array.isArray(parsed.stocks)) {
         throw new Error("Invalid QR format");
@@ -221,16 +215,11 @@ const Item = () => {
       message.success("QR data loaded successfully");
     } catch (err) {
       message.error("Invalid QR code data");
-      console.log(err);
     }
   };
 
   const handleSubmitGenerateQR = async () => {
     const { control_no, team_lead } = generateQRForm.getFieldsValue();
-    console.log(
-      " generateQRForm.getFieldsValue()",
-      generateQRForm.getFieldsValue(),
-    );
 
     if (!control_no) {
       messageApi.warning("Control Number is required");
@@ -253,7 +242,6 @@ const Item = () => {
 
     try {
       const qrString = JSON.stringify(payload);
-      console.log("qrString", qrString);
       const qrImage = await QRCode.toDataURL(qrString);
 
       setGeneratedQR({
@@ -286,9 +274,6 @@ const Item = () => {
 
     setQrItems((prev) => {
       const existingIndex = prev.findIndex((item) => item.id === values.item);
-      console.log("selectedItem", selectedItem);
-
-      // ✅ If item already exists → add quantity
       if (existingIndex !== -1) {
         const updated = [...prev];
         updated[existingIndex] = {
@@ -299,8 +284,6 @@ const Item = () => {
         return updated;
       }
 
-      console.log("selectedItem", selectedItem);
-      // ✅ Otherwise → add new item
       return [
         ...prev,
         {
@@ -331,13 +314,11 @@ const Item = () => {
       ) {
         await scanner.stop();
       }
-    } catch {
-      // swallow safely
-    }
+    } catch {}
   };
 
   const handleSubmitQrStocks = async () => {
-    if (isSubmitting) return; // 🚫 prevent double submit
+    if (isSubmitting) return;
 
     if (qrStocks.length === 0) {
       message.warning("No items to submit");
@@ -380,6 +361,7 @@ const Item = () => {
     { title: "Stock In", dataIndex: "stock_in", key: "stock_in" },
     { title: "Stock Out", dataIndex: "stock_out", key: "stock_out" },
     { title: "Return", dataIndex: "return", key: "return" },
+    { title: "Quantity", dataIndex: "quantity", key: "quantity" },
     {
       title: "Stock Price (₱)",
       dataIndex: "quantity",
@@ -428,7 +410,6 @@ const Item = () => {
       title: "Item Name",
       dataIndex: "item_id",
       render: (itemId, record) => {
-        // Look up the item name from your memoized items array
         const found = items.find((i) => i.key === itemId);
         return found ? found.item : "Unknown Item";
       },
@@ -657,15 +638,10 @@ const Item = () => {
             >
               {filteredItems
                 .filter((item) => {
-                  // If Stock Out → hide zero quantity items
                   if (selectedRequestType === 2) {
-                    console.log(
-                      "Number(item.quantity) > 1",
-                      Number(item.quantity) > 1,
-                    );
                     return Number(item.quantity) > 1;
                   }
-                  return true; // Stock In → show all
+                  return true;
                 })
                 .map((item) => (
                   <Option value={item.key} key={item.key}>
@@ -733,7 +709,7 @@ const Item = () => {
         centered
         destroyOnClose
         afterClose={() => {
-          setQrScanner(null); // cleanup
+          setQrScanner(null);
         }}
       >
         <div

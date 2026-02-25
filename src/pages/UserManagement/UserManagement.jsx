@@ -181,7 +181,13 @@ const UserManagement = () => {
           style={{ width: 250 }}
         />
 
-        <Button type="primary" onClick={() => setOpenModal(true)}>
+        <Button
+          type="primary"
+          onClick={() => {
+            setSelectedUser(null);
+            setOpenModal(true);
+          }}
+        >
           Add User
         </Button>
 
@@ -229,7 +235,10 @@ const UserManagement = () => {
       <UserModal
         open={openModal}
         selectedUser={selectedUser}
-        onCancel={() => setOpenModal(false)}
+        onCancel={() => {
+          setOpenModal(false);
+          setSelectedUser(null);
+        }}
       />
     </UserManagementStyled>
   );
