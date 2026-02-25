@@ -59,8 +59,10 @@ const Item = () => {
   const isInventory = role === 3;
 
   const [messageApi, contextHolder] = message.useMessage();
-  const [addStocks, { isLoading: isSubmitting, error: isErrorAddStock }] =
-    useAddStocksMutation();
+  const [
+    addStocks,
+    { data: addStockData, isLoading: isSubmitting, error: isErrorAddStock },
+  ] = useAddStocksMutation();
 
   const [generateQRForm] = Form.useForm();
 
@@ -197,28 +199,6 @@ const Item = () => {
     )}_${pad(now.getHours())}${pad(now.getMinutes())}${pad(now.getSeconds())}`;
   };
 
-  const handleExportSinglePDF = async (record) => {
-    try {
-      const itemId = record.key || record.id || record.item || "Unknown_Item";
-      const qrData = await QRCode.toDataURL(String(itemId));
-
-      const doc = new jsPDF();
-      doc.setFontSize(16);
-      doc.text("Item Details", 20, 20);
-      doc.setFontSize(12);
-      doc.text(`Name: ${record.item || "N/A"}`, 20, 35);
-      doc.text(`Category: ${record.category || "N/A"}`, 20, 45);
-      doc.text(`Brand: ${record.brand || "N/A"}`, 20, 55);
-      doc.text(`Size: ${record.size || "N/A"}`, 20, 65);
-      doc.text(`Price: PHP${record.price || 0}`, 20, 75);
-      doc.addImage(qrData, "PNG", 120, 20, 70, 70);
-      doc.save(`${(record.item || "Item").replace(/\s+/g, "_")}_QR.pdf`);
-    } catch (error) {
-      console.error("PDF generation failed:", error);
-      messageApi.error("Failed to generate PDF. Please try again.");
-    }
-  };
-
   const handleDelete = (id) => {
     deleteItem(id);
   };
@@ -246,25 +226,34 @@ const Item = () => {
   };
 
   const handleSubmitGenerateQR = async () => {
-    const { control_no } = generateQRForm.getFieldsValue();
+    const { control_no, team_lead } = generateQRForm.getFieldsValue();
+    console.log(
+      " generateQRForm.getFieldsValue()",
+      generateQRForm.getFieldsValue(),
+    );
 
     if (!control_no) {
       messageApi.warning("Control Number is required");
       return;
     }
 
-    const stocks = qrItems.map(({ id, ...rest }) => ({
+    if (!team_lead) {
+      messageApi.warning("Team Leader is required");
+      return;
+    }
+
+    const stocks = qrItems.map(({ id, name, ...rest }) => ({
       ...rest,
       item_id: id,
       control_no,
+      team_lead,
     }));
-    console.log("qrItems", qrItems);
-    console.log("stocks", stocks);
 
     const payload = { stocks };
 
     try {
       const qrString = JSON.stringify(payload);
+      console.log("qrString", qrString);
       const qrImage = await QRCode.toDataURL(qrString);
 
       setGeneratedQR({
@@ -368,8 +357,7 @@ const Item = () => {
       setIsPreviewModalOpen(false);
       refetch();
     } catch (err) {
-      console.error("error adding stock", isErrorAddStock);
-      message.error(isErrorAddStock?.data.message);
+      message.error("Error adding, check if the item have sufficient stocks.");
     }
   };
 
@@ -438,7 +426,12 @@ const Item = () => {
   const qrColumns = [
     {
       title: "Item Name",
-      dataIndex: "name",
+      dataIndex: "item_id",
+      render: (itemId, record) => {
+        // Look up the item name from your memoized items array
+        const found = items.find((i) => i.key === itemId);
+        return found ? found.item : "Unknown Item";
+      },
     },
     {
       title: "Price",
@@ -453,6 +446,10 @@ const Item = () => {
       title: "Type",
       dataIndex: "transaction_type",
       render: (type) => ({ 1: "STOCK-IN", 2: "STOCK-OUT", 3: "RETURN" })[type],
+    },
+    {
+      title: "Team Leader",
+      dataIndex: "team_lead",
     },
     {
       title: "Action",
@@ -693,8 +690,8 @@ const Item = () => {
           >
             <Input type="number" placeholder="Enter quantity" />
           </Form.Item>
-          <Form.Item name="team_leader" label="Team Leader">
-            <Input name="team_leader" placeholder="Enter Team Leader Name" />
+          <Form.Item name="team_lead" label="Team Leader">
+            <Input name="team_lead" placeholder="Enter Team Leader Name" />
           </Form.Item>
           <Button type="dashed" block onClick={handleAddQRItem}>
             Add Item

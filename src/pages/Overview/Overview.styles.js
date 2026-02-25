@@ -2,6 +2,7 @@ import styled from "styled-components";
 
 const OverviewStyle = styled.div`
   padding: 12px;
+  overflow: auto;
 
   /* ===============================
      STAT GRID

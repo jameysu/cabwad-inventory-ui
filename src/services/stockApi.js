@@ -70,6 +70,9 @@ export const stockApi = createApi({
       }),
       invalidatesTags: ["Stocks"],
     }),
+    getAccuracyCount: builder.query({
+      query: () => "/stock/get-accuracy-count",
+    }),
   }),
 });
 
@@ -82,4 +85,5 @@ export const {
   useGetStocksSortedByControlNumberQuery,
   useReturnStockMutation,
   useUpdateAccuracyMutation,
+  useGetAccuracyCountQuery,
 } = stockApi;
