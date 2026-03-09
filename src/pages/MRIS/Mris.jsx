@@ -659,9 +659,10 @@ const Mris = () => {
             allowClear
             loading={fetchItemsLoading}
             options={itemOptions}
+            showSearch
             filterOption={(input, option) =>
-              option?.children
-                ?.toString()
+              (option?.label ?? "")
+                .toString()
                 .toLowerCase()
                 .includes(input.toLowerCase())
             }
