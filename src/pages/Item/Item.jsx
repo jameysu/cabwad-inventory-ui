@@ -358,10 +358,24 @@ const Item = () => {
       key: "price",
       render: (value) => `₱${formatAmount(value)}`,
     },
+    { title: "Beginning", dataIndex: "quantity", key: "quantity" },
     { title: "Stock In", dataIndex: "stock_in", key: "stock_in" },
     { title: "Stock Out", dataIndex: "stock_out", key: "stock_out" },
     { title: "Return", dataIndex: "return", key: "return" },
-    { title: "Quantity", dataIndex: "quantity", key: "quantity" },
+    {
+      title: "Ending",
+      key: "ending",
+      render: (_, record) => {
+        const beginning = Number(record.quantity) || 0;
+        const stockIn = Number(record.stock_in) || 0;
+        const stockOut = Number(record.stock_out) || 0;
+        const returns = Number(record.return) || 0;
+
+        const ending = beginning + stockIn - stockOut + returns;
+
+        return ending;
+      },
+    },
     {
       title: "Stock Price (₱)",
       dataIndex: "quantity",
